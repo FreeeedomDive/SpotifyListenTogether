@@ -1,6 +1,7 @@
 using Core.Extensions;
 using Core.Models.Exceptions;
 using Core.Sessions;
+using Core.Spotify.Client;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -12,11 +13,15 @@ public class TelegramBotWorker : ITelegramBotWorker
 {
     public TelegramBotWorker(
         ITelegramBotClient telegramBotClient,
-        ISessionsService sessionsService
+        ISessionsService sessionsService,
+        ISpotifyClientFactory spotifyClientFactory,
+        ISpotifyClientStorage spotifyClientStorage
     )
     {
         this.telegramBotClient = telegramBotClient;
         this.sessionsService = sessionsService;
+        this.spotifyClientFactory = spotifyClientFactory;
+        this.spotifyClientStorage = spotifyClientStorage;
     }
 
     public async Task StartAsync()
@@ -75,6 +80,7 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         var newSessionId = sessionsService.Create(chatId);
         await SendResponseAsync(chatId, $"Создана комната ```{newSessionId}```");
+        StartSpotifyAuthAsync(chatId);
     }
 
     private async Task HandleLeaveSessionAsync(long chatId, Guid? currentSessionId)
@@ -118,6 +124,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                 $"Успешный вход в комнату ```{sessionIdToJoin}```\n"
                 + $"В этой комнате {session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
             );
+            StartSpotifyAuthAsync(chatId);
         }
         catch (SessionNotFoundException)
         {
@@ -127,7 +134,22 @@ public class TelegramBotWorker : ITelegramBotWorker
 
     private async Task HandleAddMusicInSessionAsync(long chatId, Guid? currentSessionId, string messageText)
     {
-        await SendResponseAsync(chatId, $"Текущая комната: ```{currentSessionId}```");
+        var spotifyClient = spotifyClientStorage.TryRead(chatId);
+        if (spotifyClient is null)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно пройти авторизацию в Spotify");
+            return;
+        }
+
+        var spotifyUser = await spotifyClient.UserProfile.Current();
+        await SendResponseAsync(chatId, $"Текущая комната: ```{currentSessionId}```\nТы авторизован в Spotify как {spotifyUser.DisplayName}");
+    }
+
+    private async Task StartSpotifyAuthAsync(long chatId)
+    {
+        var spotifyClient = spotifyClientFactory.CreateOrGet(chatId);
+        var spotifyUser = await spotifyClient.UserProfile.Current();
+        await SendResponseAsync(chatId, $"Ты авторизован в Spotify как {spotifyUser.DisplayName}");
     }
 
     private async Task SendResponseAsync(long chatId, string message)
@@ -136,5 +158,7 @@ public class TelegramBotWorker : ITelegramBotWorker
     }
 
     private readonly ISessionsService sessionsService;
+    private readonly ISpotifyClientFactory spotifyClientFactory;
+    private readonly ISpotifyClientStorage spotifyClientStorage;
     private readonly ITelegramBotClient telegramBotClient;
 }

@@ -1,10 +1,10 @@
 using Core.Sessions;
 using Core.Settings;
+using Core.Spotify.Auth;
+using Core.Spotify.Client;
 using Core.TelegramWorker;
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
-using Telegram.Bot.Polling;
-using Telegram.Bot.Types.Enums;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +14,8 @@ var spotifySettingsSection = builder.Configuration.GetRequiredSection("Spotify")
 builder.Services.Configure<SpotifySettings>(spotifySettingsSection);
 
 builder.Services.AddSingleton<ISessionsService, SessionsService>();
+builder.Services.AddSingleton<ISpotifyClientStorage, SpotifyClientStorage>();
+builder.Services.AddTransient<ISpotifyClientFactory, SpotifyClientFactory>();
 builder.Services.AddTransient<ITelegramBotWorker, TelegramBotWorker>();
 
 builder.Services.AddSingleton<ITelegramBotClient>(
