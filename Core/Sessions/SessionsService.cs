@@ -1,5 +1,3 @@
-using Core.Models.Exceptions;
-
 namespace Core.Sessions;
 
 public class SessionsService : ISessionsService

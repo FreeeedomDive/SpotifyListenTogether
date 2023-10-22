@@ -1,7 +1,7 @@
 using Core.Sessions;
 using Core.Settings;
-using Core.Spotify.Auth;
 using Core.Spotify.Client;
+using Core.Spotify.Links;
 using Core.TelegramWorker;
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
@@ -13,6 +13,7 @@ builder.Services.Configure<TelegramSettings>(telegramSettingsSection);
 var spotifySettingsSection = builder.Configuration.GetRequiredSection("Spotify");
 builder.Services.Configure<SpotifySettings>(spotifySettingsSection);
 
+builder.Services.AddTransient<ISpotifyLinksRecognizeService, SpotifyLinksRecognizeService>();
 builder.Services.AddSingleton<ISessionsService, SessionsService>();
 builder.Services.AddSingleton<ISpotifyClientStorage, SpotifyClientStorage>();
 builder.Services.AddTransient<ISpotifyClientFactory, SpotifyClientFactory>();

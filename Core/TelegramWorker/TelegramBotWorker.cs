@@ -1,7 +1,8 @@
 using Core.Extensions;
-using Core.Models.Exceptions;
 using Core.Sessions;
 using Core.Spotify.Client;
+using Core.Spotify.Links;
+using SpotifyAPI.Web;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -15,13 +16,15 @@ public class TelegramBotWorker : ITelegramBotWorker
         ITelegramBotClient telegramBotClient,
         ISessionsService sessionsService,
         ISpotifyClientFactory spotifyClientFactory,
-        ISpotifyClientStorage spotifyClientStorage
+        ISpotifyClientStorage spotifyClientStorage,
+        ISpotifyLinksRecognizeService spotifyLinksRecognizeService
     )
     {
         this.telegramBotClient = telegramBotClient;
         this.sessionsService = sessionsService;
         this.spotifyClientFactory = spotifyClientFactory;
         this.spotifyClientStorage = spotifyClientStorage;
+        this.spotifyLinksRecognizeService = spotifyLinksRecognizeService;
     }
 
     public async Task StartAsync()
@@ -56,17 +59,37 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         var chatId = message.Chat.Id;
         var currentSessionId = sessionsService.Find(chatId);
-        switch (messageText)
+        var username = $"{message.Chat.FirstName} {message.Chat.LastName}";
+        try
         {
-            case "/create":
-                await HandleCreateSessionAsync(chatId, currentSessionId);
-                break;
-            case "/leave":
-                await HandleLeaveSessionAsync(chatId, currentSessionId);
-                break;
-            default:
-                await HandleMessageAsync(chatId, currentSessionId, messageText);
-                break;
+            switch (messageText)
+            {
+                case "/create":
+                    await HandleCreateSessionAsync(chatId, currentSessionId);
+                    break;
+                case "/leave":
+                    await HandleLeaveSessionAsync(chatId, currentSessionId);
+                    break;
+                case "/forcesync":
+                    await HandleForceSyncAsync(chatId, currentSessionId, username);
+                    break;
+                case "/pause":
+                    await HandlePauseAsync(chatId, currentSessionId, username);
+                    break;
+                case "/unpause":
+                    await HandleUnpauseAsync(chatId, currentSessionId, username);
+                    break;
+                case "/next":
+                    await HandleNextTrackAsync(chatId, currentSessionId, username);
+                    break;
+                default:
+                    await HandleMessageAsync(chatId, currentSessionId, messageText, username);
+                    break;
+            }
+        }
+        catch (Exception e)
+        {
+            await SendResponseAsync(chatId, e.Message);
         }
     }
 
@@ -74,12 +97,12 @@ public class TelegramBotWorker : ITelegramBotWorker
     {
         if (currentSessionId.HasValue)
         {
-            await SendResponseAsync(chatId, $"Сейчас ты находишься в комнате ```{currentSessionId}```, новую комнату создать нельзя");
+            await SendResponseAsync(chatId, $"Сейчас ты находишься в комнате ```{currentSessionId}```, новую комнату создать нельзя", ParseMode.MarkdownV2);
             return;
         }
 
         var newSessionId = sessionsService.Create(chatId);
-        await SendResponseAsync(chatId, $"Создана комната ```{newSessionId}```");
+        await SendResponseAsync(chatId, $"Создана комната ```{newSessionId}```", ParseMode.MarkdownV2);
         StartSpotifyAuthAsync(chatId);
     }
 
@@ -92,10 +115,10 @@ public class TelegramBotWorker : ITelegramBotWorker
         }
 
         sessionsService.Leave(currentSessionId.Value, chatId);
-        await SendResponseAsync(chatId, $"Ты покинул комнату ```{currentSessionId}```");
+        await SendResponseAsync(chatId, $"Ты покинул комнату ```{currentSessionId}```", ParseMode.MarkdownV2);
     }
 
-    private async Task HandleMessageAsync(long chatId, Guid? currentSessionId, string messageText)
+    private async Task HandleMessageAsync(long chatId, Guid? currentSessionId, string messageText, string username)
     {
         if (!currentSessionId.HasValue)
         {
@@ -103,7 +126,7 @@ public class TelegramBotWorker : ITelegramBotWorker
             return;
         }
 
-        await HandleAddMusicInSessionAsync(chatId, currentSessionId, messageText);
+        await HandleAddMusicInSessionAsync(chatId, currentSessionId, messageText, username);
     }
 
     private async Task HandleJoinSessionAsync(long chatId, string messageText)
@@ -122,17 +145,18 @@ public class TelegramBotWorker : ITelegramBotWorker
             await SendResponseAsync(
                 chatId,
                 $"Успешный вход в комнату ```{sessionIdToJoin}```\n"
-                + $"В этой комнате {session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
+                + $"В этой комнате {session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}",
+                ParseMode.MarkdownV2
             );
             StartSpotifyAuthAsync(chatId);
         }
         catch (SessionNotFoundException)
         {
-            await SendResponseAsync(chatId, $"Комната с кодом ```{sessionIdToJoin}``` не найдена");
+            await SendResponseAsync(chatId, $"Комната с кодом ```{sessionIdToJoin}``` не найдена", ParseMode.MarkdownV2);
         }
     }
 
-    private async Task HandleAddMusicInSessionAsync(long chatId, Guid? currentSessionId, string messageText)
+    private async Task HandleAddMusicInSessionAsync(long chatId, Guid? currentSessionId, string messageText, string username)
     {
         var spotifyClient = spotifyClientStorage.TryRead(chatId);
         if (spotifyClient is null)
@@ -141,24 +165,198 @@ public class TelegramBotWorker : ITelegramBotWorker
             return;
         }
 
-        var spotifyUser = await spotifyClient.UserProfile.Current();
-        await SendResponseAsync(chatId, $"Текущая комната: ```{currentSessionId}```\nТы авторизован в Spotify как {spotifyUser.DisplayName}");
+        var spotifyLink = await spotifyLinksRecognizeService.TryRecognizeAsync(messageText);
+        if (spotifyLink is null)
+        {
+            await SendResponseAsync(chatId, "Не смог распознать ссылку");
+            return;
+        }
+
+        switch (spotifyLink.Type)
+        {
+            case SpotifyLinkType.Track:
+                var track = await spotifyClient.Tracks.Get(spotifyLink.Id);
+                await ApplyToAllParticipants(currentSessionId!.Value, client => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)));
+                await NotifyAllAsync(currentSessionId.Value, $"{username} добавляет в очередь {track.Artists.First().Name} - {track.Name}");
+                break;
+            case SpotifyLinkType.Artist:
+                await SendResponseAsync(chatId, "Воспроизведение исполнителей не поддерживается, советуем найти плейлист с этим исполнителем и воспроизвести его.");
+                break;
+            case SpotifyLinkType.Album:
+                var album = await spotifyClient.Albums.Get(spotifyLink.Id);
+                await ApplyToAllParticipants(
+                    currentSessionId!.Value, async client =>
+                    {
+                        await client.Player.SetShuffle(new PlayerShuffleRequest(false));
+                        await client.Player.ResumePlayback(
+                            new PlayerResumePlaybackRequest
+                            {
+                                ContextUri = album.Uri,
+                            }
+                        );
+                    }
+                );
+                await NotifyAllAsync(currentSessionId.Value, $"{username} начинает воспроизведение альбома {album.Name} исполнителя {album.Artists.First().Name}");
+                break;
+            case SpotifyLinkType.Playlist:
+                var playlist = await spotifyClient.Playlists.Get(spotifyLink.Id);
+                
+                await ApplyToAllParticipants(
+                    currentSessionId!.Value, async client =>
+                    {
+                        await client.Player.SetShuffle(new PlayerShuffleRequest(false));
+                        await client.Player.ResumePlayback(
+                            new PlayerResumePlaybackRequest
+                            {
+                                ContextUri = playlist.Uri,
+                            }
+                        );
+                    }
+                );
+                await NotifyAllAsync(currentSessionId.Value, $"{username} начинает воспроизведение плейлиста {playlist.Name}");
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    private async Task HandleForceSyncAsync(long chatId, Guid? currentSessionId, string username)
+    {
+        if (!currentSessionId.HasValue)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно войти в комнату для совместного прослушивания");
+            return;
+        }
+
+        var spotifyClient = spotifyClientStorage.TryRead(chatId);
+        if (spotifyClient is null)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно пройти авторизацию в Spotify");
+            return;
+        }
+
+        var clients = GetAllParticipantClients(currentSessionId.Value);
+        var allCurrentProgress = await Task.WhenAll(
+            clients.Select(
+                async client => (await client.Player.GetCurrentPlayback()).ProgressMs
+            )
+        );
+        var minProgress = allCurrentProgress.Min();
+        await ApplyToAllParticipants(
+            currentSessionId.Value, client => client.Player.ResumePlayback(
+                new PlayerResumePlaybackRequest
+                {
+                    PositionMs = minProgress,
+                }
+            )
+        );
+        await NotifyAllAsync(currentSessionId.Value, $"{username} сбрасывает прогресс воспроизведения трека до {minProgress} мс");
+    }
+
+    private async Task HandlePauseAsync(long chatId, Guid? currentSessionId, string username)
+    {
+        if (!currentSessionId.HasValue)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно войти в комнату для совместного прослушивания");
+            return;
+        }
+
+        var spotifyClient = spotifyClientStorage.TryRead(chatId);
+        if (spotifyClient is null)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно пройти авторизацию в Spotify");
+            return;
+        }
+
+        await ApplyToAllParticipants(currentSessionId.Value, client => client.Player.PausePlayback());
+        await NotifyAllAsync(currentSessionId.Value, $"{username} ставит воспроизведение на паузу");
+    }
+
+    private async Task HandleUnpauseAsync(long chatId, Guid? currentSessionId, string username)
+    {
+        if (!currentSessionId.HasValue)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно войти в комнату для совместного прослушивания");
+            return;
+        }
+
+        var spotifyClient = spotifyClientStorage.TryRead(chatId);
+        if (spotifyClient is null)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно пройти авторизацию в Spotify");
+            return;
+        }
+
+        await ApplyToAllParticipants(currentSessionId.Value, client => client.Player.ResumePlayback());
+        await NotifyAllAsync(currentSessionId.Value, $"{username} возобновляет воспроизведение");
+    }
+
+    private async Task HandleNextTrackAsync(long chatId, Guid? currentSessionId, string username)
+    {
+        if (!currentSessionId.HasValue)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно войти в комнату для совместного прослушивания");
+            return;
+        }
+
+        var spotifyClient = spotifyClientStorage.TryRead(chatId);
+        if (spotifyClient is null)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно пройти авторизацию в Spotify");
+            return;
+        }
+
+        await ApplyToAllParticipants(currentSessionId.Value, client => client.Player.SkipNext());
+        await NotifyAllAsync(currentSessionId.Value, $"{username} переключает воспроизведение на следующий трек в очереди");
+    }
+
+    private ISpotifyClient[] GetAllParticipantClients(Guid currentSessionId)
+    {
+        var session = sessionsService.TryRead(currentSessionId)!;
+        return session.Participants
+                      .Select(userId => spotifyClientStorage.TryRead(userId))
+                      .Where(client => client is not null)
+                      .Select(client => client!)
+                      .ToArray();
+    }
+
+    private async Task ApplyToAllParticipants(Guid currentSessionId, Func<ISpotifyClient, Task> action)
+    {
+        var clients = GetAllParticipantClients(currentSessionId);
+        await Task.WhenAll(clients.Select(action));
     }
 
     private async Task StartSpotifyAuthAsync(long chatId)
     {
         var spotifyClient = spotifyClientFactory.CreateOrGet(chatId);
         var spotifyUser = await spotifyClient.UserProfile.Current();
-        await SendResponseAsync(chatId, $"Ты авторизован в Spotify как {spotifyUser.DisplayName}");
+        await SendResponseAsync(chatId, $"Успешная авторизация в Spotify как {spotifyUser.DisplayName}");
     }
 
-    private async Task SendResponseAsync(long chatId, string message)
+    private async Task NotifyAllAsync(Guid sessionId, string message)
     {
-        await telegramBotClient.SendTextMessageAsync(chatId, message, parseMode: ParseMode.MarkdownV2);
+        var session = sessionsService.TryRead(sessionId)!;
+        await Task.WhenAll(
+            session.Participants.Select(
+                userId => SendResponseAsync(userId, message)
+            )
+        );
+    }
+
+    private async Task SendResponseAsync(long chatId, string message, ParseMode? parseMode = null)
+    {
+        if (parseMode is null)
+        {
+            await telegramBotClient.SendTextMessageAsync(chatId, message);
+            return;
+        }
+
+        await telegramBotClient.SendTextMessageAsync(chatId, message, parseMode: parseMode);
     }
 
     private readonly ISessionsService sessionsService;
     private readonly ISpotifyClientFactory spotifyClientFactory;
     private readonly ISpotifyClientStorage spotifyClientStorage;
+    private readonly ISpotifyLinksRecognizeService spotifyLinksRecognizeService;
     private readonly ITelegramBotClient telegramBotClient;
 }

@@ -1,4 +1,4 @@
-namespace Core.Models.Exceptions;
+namespace Core.Sessions;
 
 public class SessionNotFoundException : Exception
 {
