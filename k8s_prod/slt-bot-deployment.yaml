@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spotify-listen-together-bot-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spotifylistentogetherbot
+  template:
+    metadata:
+      labels:
+        app: spotifylistentogetherbot
+    spec:
+      containers:
+        - name: spotifylistentogetherbot
+          image: localhost:5000/spotifylistentogetherbot:{{TAG_NUMBER}}
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spotify-listen-together-bot-nodeport
+spec:
+  type: NodePort
+  selector:
+    app: spotifylistentogetherbot
+  ports:
+    - name: spotifylistentogetherbot
+      protocol: TCP
+      port: 5069
+      targetPort: 5069
+      nodePort: 30369
