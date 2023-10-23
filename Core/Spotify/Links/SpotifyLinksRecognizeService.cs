@@ -2,7 +2,7 @@ using RestSharp;
 
 namespace Core.Spotify.Links;
 
-public partial class SpotifyLinksRecognizeService : ISpotifyLinksRecognizeService
+public class SpotifyLinksRecognizeService : ISpotifyLinksRecognizeService
 {
     public async Task<SpotifyLink?> TryRecognizeAsync(string link)
     {
@@ -17,7 +17,7 @@ public partial class SpotifyLinksRecognizeService : ISpotifyLinksRecognizeServic
         var linkTypeWithId = link.StartsWith(OldSpotifyLink)
             ? link[OldSpotifyLink.Length..]
             : await GetIdFromNewLinkAsync(link);
-        
+
         const string trackType = "track/";
         if (linkTypeWithId.StartsWith(trackType))
         {

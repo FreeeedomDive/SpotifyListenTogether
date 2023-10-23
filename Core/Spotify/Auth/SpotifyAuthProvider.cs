@@ -59,10 +59,11 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
         await server.Stop();
     }
 
-    private SpotifyClient? spotifyClient;
+    private readonly IOptions<SpotifySettings> spotifySettings;
 
     private EmbedIOAuthServer server;
-    private readonly IOptions<SpotifySettings> spotifySettings;
+
+    private SpotifyClient? spotifyClient;
 
     private const string LocalCallbackUrl = "http://localhost:5069/callback";
 }

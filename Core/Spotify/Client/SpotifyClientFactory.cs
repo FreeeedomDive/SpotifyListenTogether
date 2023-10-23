@@ -41,6 +41,6 @@ public class SpotifyClientFactory : ISpotifyClientFactory
     private readonly object locker = new();
 
     private readonly ISpotifyClientStorage spotifyClientStorage;
-    private readonly ITelegramBotClient telegramBotClient;
     private readonly IOptions<SpotifySettings> spotifySettings;
+    private readonly ITelegramBotClient telegramBotClient;
 }

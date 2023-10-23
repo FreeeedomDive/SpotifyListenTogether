@@ -219,7 +219,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                 break;
             case SpotifyLinkType.Playlist:
                 var playlist = await spotifyClient.Playlists.Get(spotifyLink.Id);
-                
+
                 await ApplyToAllParticipants(
                     currentSessionId!.Value, async client =>
                     {
