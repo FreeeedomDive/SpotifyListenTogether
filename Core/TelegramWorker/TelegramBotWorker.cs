@@ -120,7 +120,8 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         var newSessionId = sessionsService.Create(chatId);
         await SendResponseAsync(chatId, $"Создана комната ```{newSessionId}```", ParseMode.MarkdownV2);
-        StartSpotifyAuthAsync(chatId);
+        // start spotify auth in background to not block telegram messages handler 
+        Task.Run(() => StartSpotifyAuthAsync(chatId));
     }
 
     private async Task HandleLeaveSessionAsync(long chatId, Guid? currentSessionId)
@@ -165,7 +166,8 @@ public class TelegramBotWorker : ITelegramBotWorker
                 + $"В этой комнате {session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}",
                 ParseMode.MarkdownV2
             );
-            StartSpotifyAuthAsync(chatId);
+            // start spotify auth in background to not block telegram messages handler 
+            Task.Run(() => StartSpotifyAuthAsync(chatId));
         }
         catch (SessionNotFoundException)
         {
