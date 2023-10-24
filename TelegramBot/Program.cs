@@ -5,6 +5,7 @@ using Core.Spotify.Links;
 using Core.TelegramWorker;
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
+using TelemetryApp.Utilities.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +13,9 @@ var telegramSettingsSection = builder.Configuration.GetRequiredSection("Telegram
 builder.Services.Configure<TelegramSettings>(telegramSettingsSection);
 var spotifySettingsSection = builder.Configuration.GetRequiredSection("Spotify");
 builder.Services.Configure<SpotifySettings>(spotifySettingsSection);
+
+var telemetrySettingsSection = builder.Configuration.GetRequiredSection("Telemetry");
+builder.Services.ConfigureTelemetryClientWithLogger("SpotifyListenTogether", "TelegramBot", telemetrySettingsSection["ApiUrl"]);
 
 builder.Services.AddTransient<ISpotifyLinksRecognizeService, SpotifyLinksRecognizeService>();
 builder.Services.AddSingleton<ISessionsService, SessionsService>();

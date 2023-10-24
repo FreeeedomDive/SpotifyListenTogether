@@ -7,6 +7,7 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using TelemetryApp.Api.Client.Log;
 
 namespace Core.TelegramWorker;
 
@@ -17,7 +18,8 @@ public class TelegramBotWorker : ITelegramBotWorker
         ISessionsService sessionsService,
         ISpotifyClientFactory spotifyClientFactory,
         ISpotifyClientStorage spotifyClientStorage,
-        ISpotifyLinksRecognizeService spotifyLinksRecognizeService
+        ISpotifyLinksRecognizeService spotifyLinksRecognizeService,
+        ILoggerClient loggerClient
     )
     {
         this.telegramBotClient = telegramBotClient;
@@ -25,6 +27,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         this.spotifyClientFactory = spotifyClientFactory;
         this.spotifyClientStorage = spotifyClientStorage;
         this.spotifyLinksRecognizeService = spotifyLinksRecognizeService;
+        this.loggerClient = loggerClient;
     }
 
     public async Task StartAsync()
@@ -44,10 +47,9 @@ public class TelegramBotWorker : ITelegramBotWorker
         await Task.Delay(-1);
     }
 
-    private Task HandlePollingErrorAsync(ITelegramBotClient client, Exception exception, CancellationToken cancellationToken)
+    private async Task HandlePollingErrorAsync(ITelegramBotClient client, Exception exception, CancellationToken cancellationToken)
     {
-        Console.WriteLine(exception);
-        return Task.CompletedTask;
+        await loggerClient.ErrorAsync(exception, "Unhandled polling error");
     }
 
     private async Task HandleUpdateAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
@@ -60,6 +62,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         var chatId = message.Chat.Id;
         var currentSessionId = sessionsService.Find(chatId);
         var username = $"{message.Chat.FirstName} {message.Chat.LastName}";
+        await loggerClient.InfoAsync("{user}: {command}", message.Chat.Username ?? username, messageText);
         try
         {
             switch (messageText)
@@ -92,6 +95,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         }
         catch (Exception e)
         {
+            await loggerClient.ErrorAsync(e, "Unexpected error in message handler");
             await SendResponseAsync(chatId, e.Message);
         }
     }
@@ -377,5 +381,6 @@ public class TelegramBotWorker : ITelegramBotWorker
     private readonly ISpotifyClientFactory spotifyClientFactory;
     private readonly ISpotifyClientStorage spotifyClientStorage;
     private readonly ISpotifyLinksRecognizeService spotifyLinksRecognizeService;
+    private readonly ILoggerClient loggerClient;
     private readonly ITelegramBotClient telegramBotClient;
 }
