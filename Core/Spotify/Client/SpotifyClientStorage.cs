@@ -14,5 +14,10 @@ public class SpotifyClientStorage : ISpotifyClientStorage
         spotifyClients[telegramUserId] = spotifyClient;
     }
 
+    public void Delete(long telegramUserId)
+    {
+        spotifyClients.Remove(telegramUserId);
+    }
+
     private readonly Dictionary<long, ISpotifyClient> spotifyClients = new();
 }

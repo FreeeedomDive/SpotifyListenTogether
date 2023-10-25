@@ -137,6 +137,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         }
 
         sessionsService.Leave(currentSessionId.Value, chatId);
+        spotifyClientStorage.Delete(chatId);
         await SendResponseAsync(chatId, $"Ты покинул комнату ```{currentSessionId}```", ParseMode.MarkdownV2);
     }
 
