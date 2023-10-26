@@ -61,8 +61,8 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         var chatId = message.Chat.Id;
         var currentSessionId = sessionsService.Find(chatId);
-        var username = $"{message.Chat.FirstName} {message.Chat.LastName}";
-        await loggerClient.InfoAsync("{user}: {command}", message.Chat.Username ?? username, messageText);
+        var username = message.Chat.Username ?? $"{message.Chat.FirstName} {message.Chat.LastName}";
+        await loggerClient.InfoAsync("{user}: {command}", username, messageText);
         try
         {
             switch (messageText)
@@ -267,12 +267,16 @@ public class TelegramBotWorker : ITelegramBotWorker
         );
         var minProgress = allCurrentProgress.Min();
         await ApplyToAllParticipants(
-            currentSessionId.Value, client => client.Player.ResumePlayback(
-                new PlayerResumePlaybackRequest
-                {
-                    PositionMs = minProgress,
-                }
-            )
+            currentSessionId.Value, async client =>
+            {
+                await client.Player.PausePlayback();
+                await client.Player.ResumePlayback(
+                    new PlayerResumePlaybackRequest
+                    {
+                        PositionMs = minProgress,
+                    }
+                );
+            }
         );
         await NotifyAllAsync(currentSessionId.Value, $"{username} сбрасывает прогресс воспроизведения трека до {minProgress} мс");
     }
