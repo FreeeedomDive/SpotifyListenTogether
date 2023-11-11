@@ -74,7 +74,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                     await HandleCreateSessionAsync(chatId, currentSessionId);
                     break;
                 case "/leave":
-                    await HandleLeaveSessionAsync(chatId, currentSessionId);
+                    await HandleLeaveSessionAsync(chatId, currentSessionId, username);
                     break;
                 case "/forcesync":
                     await HandleForceSyncAsync(chatId, currentSessionId, username);
@@ -128,7 +128,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         Task.Run(() => StartSpotifyAuthAsync(chatId));
     }
 
-    private async Task HandleLeaveSessionAsync(long chatId, Guid? currentSessionId)
+    private async Task HandleLeaveSessionAsync(long chatId, Guid? currentSessionId, string username)
     {
         if (!currentSessionId.HasValue)
         {
@@ -137,7 +137,13 @@ public class TelegramBotWorker : ITelegramBotWorker
         }
 
         sessionsService.Leave(currentSessionId.Value, chatId);
+        var session = sessionsService.TryRead(currentSessionId.Value)!;
         spotifyClientStorage.Delete(chatId);
+        await NotifyAllAsync(
+            currentSessionId.Value,
+            $"{username} выходит из комнаты\n"
+            + $"В этой комнате {session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
+        );
         await SendResponseAsync(chatId, $"Ты покинул комнату `{currentSessionId}`", ParseMode.MarkdownV2);
     }
 
@@ -145,14 +151,14 @@ public class TelegramBotWorker : ITelegramBotWorker
     {
         if (!currentSessionId.HasValue)
         {
-            await HandleJoinSessionAsync(chatId, messageText);
+            await HandleJoinSessionAsync(chatId, messageText, username);
             return;
         }
 
         await HandleAddMusicInSessionAsync(chatId, currentSessionId, messageText, username);
     }
 
-    private async Task HandleJoinSessionAsync(long chatId, string messageText)
+    private async Task HandleJoinSessionAsync(long chatId, string username, string messageText)
     {
         var isCorrectSessionIdFormat = Guid.TryParse(messageText, out var sessionIdToJoin);
         if (!isCorrectSessionIdFormat)
@@ -165,11 +171,10 @@ public class TelegramBotWorker : ITelegramBotWorker
         {
             sessionsService.Join(sessionIdToJoin, chatId);
             var session = sessionsService.TryRead(sessionIdToJoin)!;
-            await SendResponseAsync(
-                chatId,
-                $"Успешный вход в комнату `{sessionIdToJoin}`\n"
-                + $"В этой комнате {session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}",
-                ParseMode.MarkdownV2
+            await NotifyAllAsync(
+                sessionIdToJoin,
+                $"{username} присоединяется\n"
+                + $"В этой комнате {session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
             );
             // start spotify auth in background to not block telegram messages handler 
             Task.Run(() => StartSpotifyAuthAsync(chatId));
@@ -382,10 +387,11 @@ public class TelegramBotWorker : ITelegramBotWorker
         await telegramBotClient.SendTextMessageAsync(chatId, message, parseMode: parseMode);
     }
 
+    private readonly ILoggerClient loggerClient;
+
     private readonly ISessionsService sessionsService;
     private readonly ISpotifyClientFactory spotifyClientFactory;
     private readonly ISpotifyClientStorage spotifyClientStorage;
     private readonly ISpotifyLinksRecognizeService spotifyLinksRecognizeService;
-    private readonly ILoggerClient loggerClient;
     private readonly ITelegramBotClient telegramBotClient;
 }
