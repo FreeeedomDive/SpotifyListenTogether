@@ -88,6 +88,9 @@ public class TelegramBotWorker : ITelegramBotWorker
                 case "/next":
                     await HandleNextTrackAsync(chatId, currentSessionId, username);
                     break;
+                case "/_session":
+                    await HandleCurrentSessionInfoAsync(chatId, currentSessionId);
+                    break;
                 default:
                     await HandleMessageAsync(chatId, currentSessionId, messageText, username);
                     break;
@@ -266,7 +269,7 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         var clients = GetAllParticipantClients(currentSessionId.Value);
         var allCurrentProgress = await Task.WhenAll(
-            clients.Select(
+            clients.Values.Select(
                 async client => (await client.Player.GetCurrentPlayback()).ProgressMs
             )
         );
@@ -343,20 +346,47 @@ public class TelegramBotWorker : ITelegramBotWorker
         await NotifyAllAsync(currentSessionId.Value, $"{username} переключает воспроизведение на следующий трек в очереди");
     }
 
-    private ISpotifyClient[] GetAllParticipantClients(Guid currentSessionId)
+    private async Task HandleCurrentSessionInfoAsync(long chatId, Guid? currentSessionId)
+    {
+        if (!currentSessionId.HasValue)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно войти в комнату для совместного прослушивания");
+            return;
+        }
+
+        var clientsByUserId = GetAllParticipantClients(currentSessionId.Value);
+        var tasks = clientsByUserId.Select(
+            async pair =>
+            {
+                var telegramId = pair.Key;
+                var spotifyClient = pair.Value;
+
+                var telegramName = (await telegramBotClient.GetChatAsync(telegramId)).Username!;
+                var spotifyCurrentlyPlaying = await spotifyClient.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest());
+                var spotifyCurrentlyPlayingTrack = spotifyCurrentlyPlaying.Item as FullTrack;
+
+                return $"{telegramName}: "
+                       + $"{spotifyCurrentlyPlayingTrack!.Artists.First().Name} - {spotifyCurrentlyPlayingTrack.Name}, "
+                       + $"прогресс: {spotifyCurrentlyPlaying.ProgressMs} мс";
+            }
+        );
+        var playbackInfos = await Task.WhenAll(tasks);
+        await SendResponseAsync(chatId, string.Join("\n", playbackInfos));
+    }
+
+    private Dictionary<long, ISpotifyClient> GetAllParticipantClients(Guid currentSessionId)
     {
         var session = sessionsService.TryRead(currentSessionId)!;
         return session.Participants
-                      .Select(userId => spotifyClientStorage.TryRead(userId))
-                      .Where(client => client is not null)
-                      .Select(client => client!)
-                      .ToArray();
+                      .Select(userId => (UserId: userId, SpotifyClient: spotifyClientStorage.TryRead(userId)))
+                      .Where(pair => pair.SpotifyClient is not null)
+                      .ToDictionary(pair => pair.UserId, pair => pair.SpotifyClient!);
     }
 
     private async Task ApplyToAllParticipants(Guid currentSessionId, Func<ISpotifyClient, Task> action)
     {
         var clients = GetAllParticipantClients(currentSessionId);
-        await Task.WhenAll(clients.Select(action));
+        await Task.WhenAll(clients.Values.Select(action));
     }
 
     private async Task StartSpotifyAuthAsync(long chatId)
