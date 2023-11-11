@@ -118,12 +118,12 @@ public class TelegramBotWorker : ITelegramBotWorker
     {
         if (currentSessionId.HasValue)
         {
-            await SendResponseAsync(chatId, $"Сейчас ты находишься в комнате ```{currentSessionId}```, новую комнату создать нельзя", ParseMode.MarkdownV2);
+            await SendResponseAsync(chatId, $"Сейчас ты находишься в комнате `{currentSessionId}`, новую комнату создать нельзя", ParseMode.MarkdownV2);
             return;
         }
 
         var newSessionId = sessionsService.Create(chatId);
-        await SendResponseAsync(chatId, $"Создана комната ```{newSessionId}```", ParseMode.MarkdownV2);
+        await SendResponseAsync(chatId, $"Создана комната `{newSessionId}`", ParseMode.MarkdownV2);
         // start spotify auth in background to not block telegram messages handler 
         Task.Run(() => StartSpotifyAuthAsync(chatId));
     }
@@ -138,7 +138,7 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         sessionsService.Leave(currentSessionId.Value, chatId);
         spotifyClientStorage.Delete(chatId);
-        await SendResponseAsync(chatId, $"Ты покинул комнату ```{currentSessionId}```", ParseMode.MarkdownV2);
+        await SendResponseAsync(chatId, $"Ты покинул комнату `{currentSessionId}`", ParseMode.MarkdownV2);
     }
 
     private async Task HandleMessageAsync(long chatId, Guid? currentSessionId, string messageText, string username)
@@ -167,7 +167,7 @@ public class TelegramBotWorker : ITelegramBotWorker
             var session = sessionsService.TryRead(sessionIdToJoin)!;
             await SendResponseAsync(
                 chatId,
-                $"Успешный вход в комнату ```{sessionIdToJoin}```\n"
+                $"Успешный вход в комнату `{sessionIdToJoin}`\n"
                 + $"В этой комнате {session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}",
                 ParseMode.MarkdownV2
             );
@@ -176,7 +176,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         }
         catch (SessionNotFoundException)
         {
-            await SendResponseAsync(chatId, $"Комната с кодом ```{sessionIdToJoin}``` не найдена", ParseMode.MarkdownV2);
+            await SendResponseAsync(chatId, $"Комната с кодом `{sessionIdToJoin}` не найдена", ParseMode.MarkdownV2);
         }
     }
 
