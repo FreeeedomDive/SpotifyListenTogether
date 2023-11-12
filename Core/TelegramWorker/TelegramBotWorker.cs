@@ -365,9 +365,10 @@ public class TelegramBotWorker : ITelegramBotWorker
                 var spotifyCurrentlyPlaying = await spotifyClient.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest());
                 var spotifyCurrentlyPlayingTrack = spotifyCurrentlyPlaying.Item as FullTrack;
 
-                return $"{telegramName}: "
-                       + $"{spotifyCurrentlyPlayingTrack!.Artists.First().Name} - {spotifyCurrentlyPlayingTrack.Name}, "
-                       + $"прогресс: {spotifyCurrentlyPlaying.ProgressMs} мс";
+                return $"{telegramName}: " + (spotifyCurrentlyPlayingTrack is null
+                           ? "No active devices found"
+                           : $"{spotifyCurrentlyPlayingTrack.Artists.First().Name} - {spotifyCurrentlyPlayingTrack.Name}, "
+                             + $"прогресс: {spotifyCurrentlyPlaying.ProgressMs} мс");
             }
         );
         var playbackInfos = await Task.WhenAll(tasks);
