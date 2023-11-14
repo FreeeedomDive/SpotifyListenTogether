@@ -161,7 +161,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         await HandleAddMusicInSessionAsync(chatId, currentSessionId, messageText, username);
     }
 
-    private async Task HandleJoinSessionAsync(long chatId, string username, string messageText)
+    private async Task HandleJoinSessionAsync(long chatId, string messageText, string username)
     {
         var isCorrectSessionIdFormat = Guid.TryParse(messageText, out var sessionIdToJoin);
         if (!isCorrectSessionIdFormat)
