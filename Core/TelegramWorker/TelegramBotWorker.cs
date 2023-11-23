@@ -141,7 +141,6 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         sessionsService.Leave(currentSessionId.Value, chatId);
         var session = sessionsService.TryRead(currentSessionId.Value)!;
-        spotifyClientStorage.Delete(chatId);
         await NotifyAllAsync(
             currentSessionId.Value,
             $"{username} выходит из комнаты\n"
