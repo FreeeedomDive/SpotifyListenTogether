@@ -88,6 +88,9 @@ public class TelegramBotWorker : ITelegramBotWorker
                 case "/next":
                     await HandleNextTrackAsync(chatId, currentSessionId, username);
                     break;
+                case "/auth":
+                    await HandleAuthAsync(chatId);
+                    break;
                 case "/_session":
                     await HandleCurrentSessionInfoAsync(chatId, currentSessionId);
                     break;
@@ -360,6 +363,11 @@ public class TelegramBotWorker : ITelegramBotWorker
         await NotifyAllAsync(currentSessionId.Value, $"{username} переключает воспроизведение на следующий трек в очереди");
     }
 
+    private async Task HandleAuthAsync(long chatId)
+    {
+        Task.Run(() => StartSpotifyAuthAsync(chatId, true));
+    }
+
     private async Task HandleCurrentSessionInfoAsync(long chatId, Guid? currentSessionId)
     {
         if (!currentSessionId.HasValue)
@@ -378,11 +386,13 @@ public class TelegramBotWorker : ITelegramBotWorker
                 var telegramName = (await telegramBotClient.GetChatAsync(telegramId)).Username!;
                 var spotifyCurrentlyPlaying = await spotifyClient.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest());
                 var spotifyCurrentlyPlayingTrack = spotifyCurrentlyPlaying?.Item as FullTrack;
+                var currentPlayback = await spotifyClient.Player.GetCurrentPlayback();
 
-                return $"{telegramName}: " + (spotifyCurrentlyPlaying is null || spotifyCurrentlyPlayingTrack is null
+                return $"\t{telegramName}\n" + (spotifyCurrentlyPlaying is null || spotifyCurrentlyPlayingTrack is null
                     ? "No active devices found"
-                    : $"{spotifyCurrentlyPlayingTrack.Artists.First().Name} - {spotifyCurrentlyPlayingTrack.Name}, "
-                      + $"прогресс: {spotifyCurrentlyPlaying.ProgressMs} мс");
+                    : $"Устройство: {currentPlayback.Device.Name}\n"
+                      + $"{spotifyCurrentlyPlayingTrack.Artists.First().Name} - {spotifyCurrentlyPlayingTrack.Name}\n"
+                      + $@"Прогресс: {TimeSpan.FromMilliseconds(currentPlayback.ProgressMs):m\:ss\.fff} мс");
             }
         );
         var playbackInfos = await Task.WhenAll(tasks);
@@ -404,9 +414,9 @@ public class TelegramBotWorker : ITelegramBotWorker
         await Task.WhenAll(clients.Values.Select(x => action(x.SpotifyClient, x.Participant)));
     }
 
-    private async Task StartSpotifyAuthAsync(long chatId)
+    private async Task StartSpotifyAuthAsync(long chatId, bool forceReAuth = false)
     {
-        var spotifyClient = spotifyClientFactory.CreateOrGet(chatId);
+        var spotifyClient = spotifyClientFactory.CreateOrGet(chatId, forceReAuth);
         var spotifyUser = await spotifyClient.UserProfile.Current();
         await SendResponseAsync(chatId, $"Успешная авторизация в Spotify как {spotifyUser.DisplayName}");
     }

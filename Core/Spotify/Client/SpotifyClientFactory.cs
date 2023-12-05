@@ -19,10 +19,10 @@ public class SpotifyClientFactory : ISpotifyClientFactory
         this.spotifySettings = spotifySettings;
     }
 
-    public ISpotifyClient CreateOrGet(long telegramUserId)
+    public ISpotifyClient CreateOrGet(long telegramUserId, bool forceReAuth = false)
     {
         var existingClient = spotifyClientStorage.TryRead(telegramUserId);
-        if (existingClient is not null)
+        if (existingClient is not null && !forceReAuth)
         {
             return existingClient;
         }
