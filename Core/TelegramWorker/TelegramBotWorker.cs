@@ -397,7 +397,7 @@ public class TelegramBotWorker : ITelegramBotWorker
             }
         );
         var playbackInfos = await Task.WhenAll(tasks);
-        await SendResponseAsync(chatId, string.Join("\n", playbackInfos));
+        await SendResponseAsync(chatId, string.Join("\n\n", playbackInfos));
     }
 
     private Dictionary<long, (SessionParticipant Participant, ISpotifyClient SpotifyClient)> GetAllParticipantSessionsAndClients(Guid currentSessionId)
