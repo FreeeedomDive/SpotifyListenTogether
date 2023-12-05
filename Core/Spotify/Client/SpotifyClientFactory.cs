@@ -19,7 +19,7 @@ public class SpotifyClientFactory : ISpotifyClientFactory
         this.spotifySettings = spotifySettings;
     }
 
-    public ISpotifyClient CreateOrGet(long telegramUserId, bool forceReAuth = false)
+    public ISpotifyClient? CreateOrGet(long telegramUserId, bool forceReAuth = false)
     {
         var existingClient = spotifyClientStorage.TryRead(telegramUserId);
         if (existingClient is not null && !forceReAuth)
@@ -31,8 +31,14 @@ public class SpotifyClientFactory : ISpotifyClientFactory
         {
             var authProvider = new SpotifyAuthProvider(spotifySettings);
             var authLink = authProvider.CreateAuthLinkAsync().GetAwaiter().GetResult();
-            telegramBotClient.SendTextMessageAsync(telegramUserId, $"Теперь нужно авторизоваться в Spotify по этой ссылке: {authLink}").GetAwaiter().GetResult();
+            telegramBotClient.SendTextMessageAsync(telegramUserId, $"Теперь нужно авторизоваться в Spotify по этой ссылке: {authLink}\n(ссылка активна минуту)")
+                             .GetAwaiter().GetResult();
             var client = authProvider.WaitForClientInitializationAsync().GetAwaiter().GetResult();
+            if (client is null)
+            {
+                return null;
+            }
+
             spotifyClientStorage.CreateOrUpdate(telegramUserId, client);
             return client;
         }

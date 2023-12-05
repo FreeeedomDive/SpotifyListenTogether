@@ -418,6 +418,12 @@ public class TelegramBotWorker : ITelegramBotWorker
     private async Task StartSpotifyAuthAsync(long chatId, bool forceReAuth = false)
     {
         var spotifyClient = spotifyClientFactory.CreateOrGet(chatId, forceReAuth);
+        if (spotifyClient is null)
+        {
+            await SendResponseAsync(chatId, "Истекло время для авторизации");
+            return;
+        }
+
         var spotifyUser = await spotifyClient.UserProfile.Current();
         await SendResponseAsync(chatId, $"Успешная авторизация в Spotify как {spotifyUser.DisplayName}");
     }

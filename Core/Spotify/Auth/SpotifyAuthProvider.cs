@@ -15,10 +15,21 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
     public async Task<string> CreateAuthLinkAsync()
     {
         server = new EmbedIOAuthServer(new Uri(LocalCallbackUrl), 5069);
+        cancellationTokenSource = new CancellationTokenSource();
         await server.Start();
 
         server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
         server.ErrorReceived += OnErrorReceived;
+        Task.Run(
+            async () =>
+            {
+                await Task.Delay(1000 * 60);
+                if (!cancellationTokenSource.IsCancellationRequested)
+                {
+                    await server.Stop();
+                }
+            }
+        );
 
         var request = new LoginRequest(new Uri(spotifySettings.Value.RedirectUri), spotifySettings.Value.ClientId, LoginRequest.ResponseType.Code)
         {
@@ -27,9 +38,9 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
         return request.ToUri().AbsoluteUri;
     }
 
-    public async Task<SpotifyClient> WaitForClientInitializationAsync()
+    public async Task<SpotifyClient?> WaitForClientInitializationAsync()
     {
-        while (spotifyClient is null)
+        while (!cancellationTokenSource.IsCancellationRequested && spotifyClient is null)
         {
             await Task.Delay(500);
         }
@@ -51,6 +62,7 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
                      .WithAuthenticator(new AuthorizationCodeAuthenticator(spotifySettings.Value.ClientId, spotifySettings.Value.ClientSecret, tokenResponse));
 
         spotifyClient = new SpotifyClient(config);
+        cancellationTokenSource.Cancel();
     }
 
     private async Task OnErrorReceived(object sender, string error, string? state)
@@ -62,6 +74,7 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
     private readonly IOptions<SpotifySettings> spotifySettings;
 
     private EmbedIOAuthServer server;
+    private CancellationTokenSource cancellationTokenSource;
 
     private SpotifyClient? spotifyClient;
 

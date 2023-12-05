@@ -4,5 +4,5 @@ namespace Core.Spotify.Client;
 
 public interface ISpotifyClientFactory
 {
-    ISpotifyClient CreateOrGet(long telegramUserId, bool forceReAuth = false);
+    ISpotifyClient? CreateOrGet(long telegramUserId, bool forceReAuth = false);
 }
