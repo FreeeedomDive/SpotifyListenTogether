@@ -13,9 +13,13 @@ public class SessionsService : ISessionsService
         {
             Id = Guid.NewGuid(),
             AuthorId = authorId,
-            Participants = new List<long>
+            Participants = new List<SessionParticipant>
             {
-                authorId,
+                new()
+                {
+                    UserId = authorId,
+                    DeviceId = null,
+                },
             },
         };
         sessions.Add(newSession.Id, newSession);
@@ -34,7 +38,7 @@ public class SessionsService : ISessionsService
         if (currentUserSession.HasValue)
         {
             var oldSession = sessions[currentUserSession.Value];
-            oldSession.Participants.Remove(userId);
+            oldSession.Participants.RemoveAll(x => x.UserId == userId);
         }
 
         var session = TryRead(sessionId);
@@ -43,7 +47,11 @@ public class SessionsService : ISessionsService
             throw new SessionNotFoundException(sessionId);
         }
 
-        session.Participants.Add(userId);
+        session.Participants.Add(new SessionParticipant
+        {
+            UserId = userId,
+            DeviceId = null,
+        });
         sessionsByUser.Add(userId, sessionId);
     }
 
@@ -51,7 +59,7 @@ public class SessionsService : ISessionsService
     {
         if (sessions.TryGetValue(sessionId, out var session))
         {
-            session.Participants.Remove(userId);
+            session.Participants.RemoveAll(x => x.UserId == userId);
         }
 
         if (sessionsByUser.TryGetValue(userId, out var userSessionId) && userSessionId == sessionId)
@@ -68,9 +76,9 @@ public class SessionsService : ISessionsService
             return;
         }
 
-        foreach (var userId in session.Participants)
+        foreach (var participant in session.Participants)
         {
-            sessionsByUser.Remove(userId);
+            sessionsByUser.Remove(participant.UserId);
         }
 
         sessions.Remove(sessionId);

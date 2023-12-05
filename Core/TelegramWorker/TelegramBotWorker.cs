@@ -378,7 +378,7 @@ public class TelegramBotWorker : ITelegramBotWorker
     {
         var session = sessionsService.TryRead(currentSessionId)!;
         return session.Participants
-                      .Select(userId => (UserId: userId, SpotifyClient: spotifyClientStorage.TryRead(userId)))
+                      .Select(participant => (UserId: participant.UserId, SpotifyClient: spotifyClientStorage.TryRead(participant.UserId)))
                       .Where(pair => pair.SpotifyClient is not null)
                       .ToDictionary(pair => pair.UserId, pair => pair.SpotifyClient!);
     }
@@ -401,7 +401,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         var session = sessionsService.TryRead(sessionId)!;
         await Task.WhenAll(
             session.Participants.Select(
-                userId => SendResponseAsync(userId, message)
+                participant => SendResponseAsync(participant.UserId, message)
             )
         );
     }
