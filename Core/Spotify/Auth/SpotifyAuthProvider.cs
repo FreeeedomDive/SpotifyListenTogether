@@ -27,6 +27,7 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
                 if (!cancellationTokenSource.IsCancellationRequested)
                 {
                     await server.Stop();
+                    cancellationTokenSource.Cancel();
                 }
             }
         );
