@@ -412,7 +412,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                 var spotifyCurrentlyPlayingTrack = spotifyCurrentlyPlaying?.Item as FullTrack;
                 var currentPlayback = await spotifyClient.Player.GetCurrentPlayback();
 
-                return $"** {telegramName} **\n" +
+                return $"*{telegramName}*\n" +
                        (spotifyCurrentlyPlaying is null || spotifyCurrentlyPlayingTrack is null
                            ? "No active devices found"
                            : $"Устройство: {currentPlayback.Device.Name.Escape()}\n"
