@@ -19,7 +19,7 @@ public static class FormattingExtensions
         return $"[{playlist.Name!.Escape()}]({playlist.ExternalUrls!["spotify"]})";
     }
 
-    private static string Escape(this string str)
+    public static string Escape(this string str)
     {
         return str.Replace("-", "\\-")
                   .Replace("(", "\\(")

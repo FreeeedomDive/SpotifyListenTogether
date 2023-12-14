@@ -415,13 +415,13 @@ public class TelegramBotWorker : ITelegramBotWorker
                 return $"** {telegramName} **\n" +
                        (spotifyCurrentlyPlaying is null || spotifyCurrentlyPlayingTrack is null
                            ? "No active devices found"
-                           : $"Устройство: {currentPlayback.Device.Name}\n"
-                             + $"{spotifyCurrentlyPlayingTrack.Artists.First().Name} - {spotifyCurrentlyPlayingTrack.Name}\n"
-                             + $@"Прогресс: {TimeSpan.FromMilliseconds(currentPlayback.ProgressMs):m\:ss\.fff}");
+                           : $"Устройство: {currentPlayback.Device.Name.Escape()}\n"
+                             + $"{spotifyCurrentlyPlayingTrack.ToFormattedString()}\n"
+                             + $@"Прогресс: {TimeSpan.FromMilliseconds(currentPlayback.ProgressMs):m\:ss\.fff}".Escape());
             }
         );
         var playbackInfos = await Task.WhenAll(tasks);
-        await SendResponseAsync(chatId, string.Join("\n\n", playbackInfos));
+        await SendResponseAsync(chatId, string.Join("\n\n", playbackInfos), ParseMode.MarkdownV2);
     }
 
     private Dictionary<long, (SessionParticipant Participant, ISpotifyClient SpotifyClient)> GetAllParticipantSessionsAndClients(Guid currentSessionId)
