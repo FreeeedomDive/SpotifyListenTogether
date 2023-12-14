@@ -11,7 +11,7 @@ public static class FormattingExtensions
 
     public static string ToFormattedString(this FullAlbum album)
     {
-        return $"[{album.Name}]({album.ExternalUrls["spotify"]})".EscapeTelegramReservedSymbols();
+        return $"[{album.Artists.First().Name} - {album.Name}]({album.ExternalUrls["spotify"]})".EscapeTelegramReservedSymbols();
     }
 
     public static string ToFormattedString(this SimpleArtist artist)
