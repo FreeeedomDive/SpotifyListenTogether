@@ -202,7 +202,16 @@ public class TelegramBotWorker : ITelegramBotWorker
         var spotifyLink = await spotifyLinksRecognizeService.TryRecognizeAsync(messageText);
         if (spotifyLink is null)
         {
-            await SendResponseAsync(chatId, "Не смог распознать ссылку");
+            var searchResponse = await spotifyClient.Search.Item(new SearchRequest(SearchRequest.Types.Track, messageText));
+            var track = searchResponse.Tracks.Items?.FirstOrDefault();
+            if (track is null)
+            {
+                await SendResponseAsync(chatId, "Ничего не найдено");
+                return;
+            }
+            await ApplyToAllParticipants(currentSessionId!.Value, (client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)));
+            await NotifyAllAsync(currentSessionId.Value, $"{username} добавляет в очередь {track.Artists.First().Name} - {track.Name}");
+
             return;
         }
 
