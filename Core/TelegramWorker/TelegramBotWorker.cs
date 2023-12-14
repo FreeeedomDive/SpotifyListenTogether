@@ -246,7 +246,10 @@ public class TelegramBotWorker : ITelegramBotWorker
                         );
                     }
                 );
-                await NotifyAllAsync(currentSessionId.Value, $"{username} начинает воспроизведение альбома {album.Name} исполнителя {album.Artists.First().Name}");
+                await NotifyAllAsync(
+                    currentSessionId.Value,
+                    $"{username} начинает воспроизведение альбома {album.ToFormattedString()} исполнителя {album.Artists.First().ToFormattedString()}"
+                    );
                 break;
             case SpotifyLinkType.Playlist:
                 var playlist = await spotifyClient.Playlists.Get(spotifyLink.Id);
@@ -263,7 +266,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                         );
                     }
                 );
-                await NotifyAllAsync(currentSessionId.Value, $"{username} начинает воспроизведение плейлиста {playlist.Name}");
+                await NotifyAllAsync(currentSessionId.Value, $"{username} начинает воспроизведение плейлиста {playlist.ToFormattedString()}");
                 break;
             default:
                 throw new ArgumentOutOfRangeException();

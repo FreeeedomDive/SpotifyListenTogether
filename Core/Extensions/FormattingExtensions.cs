@@ -4,8 +4,30 @@ namespace Core.Extensions;
 
 public static class FormattingExtensions
 {
-    public static string ToFormattedString(this FullTrack fullTrack)
+    public static string ToFormattedString(this FullTrack track)
     {
-        return $"[{fullTrack.Artists.First().Name} - {fullTrack.Name}]({fullTrack.ExternalUrls["spotify"]})".Replace("-", "\\-");
+        return $"[{track.Artists.First().Name} - {track.Name}]({track.ExternalUrls["spotify"]})".EscapeTelegramReservedSymbols();
+    }
+
+    public static string ToFormattedString(this FullAlbum album)
+    {
+        return $"[{album.Name}]({album.ExternalUrls["spotify"]})".EscapeTelegramReservedSymbols();
+    }
+
+    public static string ToFormattedString(this SimpleArtist artist)
+    {
+        return $"[{artist.Name}]({artist.ExternalUrls["spotify"]})".EscapeTelegramReservedSymbols();
+    }
+
+    public static string ToFormattedString(this FullPlaylist playlist)
+    {
+        return $"[{playlist.Name}]({playlist.ExternalUrls!["spotify"]})".EscapeTelegramReservedSymbols();
+    }
+
+    private static string EscapeTelegramReservedSymbols(this string str)
+    {
+        return str.Replace("-", "\\-")
+                  .Replace("(", "\\(")
+                  .Replace(")", "\\)");
     }
 }
