@@ -209,8 +209,12 @@ public class TelegramBotWorker : ITelegramBotWorker
                 await SendResponseAsync(chatId, "Ничего не найдено");
                 return;
             }
+
             await ApplyToAllParticipants(currentSessionId!.Value, (client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)));
-            await NotifyAllAsync(currentSessionId.Value, $"{username} добавляет в очередь {track.Artists.First().Name} - {track.Name}");
+            await NotifyAllAsync(
+                currentSessionId.Value,
+                $"{username} добавляет в очередь [{track.Artists.First().Name} - {track.Name}]({track.ExternalUrls["spotify"]})", ParseMode.MarkdownV2
+            );
 
             return;
         }
@@ -437,12 +441,12 @@ public class TelegramBotWorker : ITelegramBotWorker
         await SendResponseAsync(chatId, $"Успешная авторизация в Spotify как {spotifyUser.DisplayName}");
     }
 
-    private async Task NotifyAllAsync(Guid sessionId, string message)
+    private async Task NotifyAllAsync(Guid sessionId, string message, ParseMode? parseMode = null)
     {
         var session = sessionsService.TryRead(sessionId)!;
         await Task.WhenAll(
             session.Participants.Select(
-                participant => SendResponseAsync(participant.UserId, message)
+                participant => SendResponseAsync(participant.UserId, message, parseMode)
             )
         );
     }
