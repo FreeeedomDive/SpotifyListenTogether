@@ -213,7 +213,7 @@ public class TelegramBotWorker : ITelegramBotWorker
             await ApplyToAllParticipants(currentSessionId!.Value, (client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)));
             await NotifyAllAsync(
                 currentSessionId.Value,
-                $"{username} добавляет в очередь [{track.Artists.First().Name} - {track.Name}]({track.ExternalUrls["spotify"]})", ParseMode.MarkdownV2
+                $"{username} добавляет в очередь {track.ToFormattedString()}", ParseMode.MarkdownV2
             );
 
             return;
@@ -224,7 +224,10 @@ public class TelegramBotWorker : ITelegramBotWorker
             case SpotifyLinkType.Track:
                 var track = await spotifyClient.Tracks.Get(spotifyLink.Id);
                 await ApplyToAllParticipants(currentSessionId!.Value, (client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)));
-                await NotifyAllAsync(currentSessionId.Value, $"{username} добавляет в очередь {track.Artists.First().Name} - {track.Name}");
+                await NotifyAllAsync(
+                    currentSessionId.Value,
+                    $"{username} добавляет в очередь {track.ToFormattedString()}", ParseMode.MarkdownV2
+                );
                 break;
             case SpotifyLinkType.Artist:
                 await SendResponseAsync(chatId, "Воспроизведение исполнителей не поддерживается, советуем найти плейлист с этим исполнителем и воспроизвести его.");
