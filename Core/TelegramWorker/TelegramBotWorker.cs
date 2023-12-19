@@ -210,12 +210,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                 return;
             }
 
-            await ApplyToAllParticipants(currentSessionId!.Value, (client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)));
-            await NotifyAllAsync(
-                currentSessionId.Value,
-                $"{username} добавляет в очередь {track.ToFormattedString()}", ParseMode.MarkdownV2
-            );
-
+            await PlayTrackAsync(currentSessionId!.Value, track, username);
             return;
         }
 
@@ -223,59 +218,104 @@ public class TelegramBotWorker : ITelegramBotWorker
         {
             case SpotifyLinkType.Track:
                 var track = await spotifyClient.Tracks.Get(spotifyLink.Id);
-                await ApplyToAllParticipants(currentSessionId!.Value, (client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)));
-                await NotifyAllAsync(
-                    currentSessionId.Value,
-                    $"{username} добавляет в очередь {track.ToFormattedString()}", ParseMode.MarkdownV2
-                );
+                await PlayTrackAsync(currentSessionId!.Value, track, username);
                 break;
             case SpotifyLinkType.Artist:
                 await SendResponseAsync(chatId, "Воспроизведение исполнителей не поддерживается, советуем найти плейлист с этим исполнителем и воспроизвести его.");
                 break;
             case SpotifyLinkType.Album:
                 var album = await spotifyClient.Albums.Get(spotifyLink.Id);
-                await ApplyToAllParticipants(
-                    currentSessionId!.Value, async (client, _) =>
-                    {
-                        await client.Player.SetShuffle(new PlayerShuffleRequest(false));
-                        await client.Player.ResumePlayback(
-                            new PlayerResumePlaybackRequest
-                            {
-                                ContextUri = album.Uri,
-                            }
-                        );
-                    }
-                );
-                await NotifyAllAsync(
-                    currentSessionId.Value,
-                    $"{username} начинает воспроизведение альбома {album.ToFormattedString()}",
-                    ParseMode.MarkdownV2
-                );
+                await PlayAlbumAsync(currentSessionId!.Value, album, username);
                 break;
             case SpotifyLinkType.Playlist:
                 var playlist = await spotifyClient.Playlists.Get(spotifyLink.Id);
-
-                await ApplyToAllParticipants(
-                    currentSessionId!.Value, async (client, _) =>
-                    {
-                        await client.Player.SetShuffle(new PlayerShuffleRequest(false));
-                        await client.Player.ResumePlayback(
-                            new PlayerResumePlaybackRequest
-                            {
-                                ContextUri = playlist.Uri,
-                            }
-                        );
-                    }
-                );
-                await NotifyAllAsync(
-                    currentSessionId.Value,
-                    $"{username} начинает воспроизведение плейлиста {playlist.ToFormattedString()}",
-                    ParseMode.MarkdownV2
-                );
+                await PlayPlaylistAsync(currentSessionId!.Value, playlist, username);
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
         }
+    }
+
+    private async Task PlayTrackAsync(Guid sessionId, FullTrack track, string username)
+    {
+        var session = sessionsService.TryRead(sessionId)!;
+        var now = DateTime.UtcNow;
+        if (session.LastActivity is null || (now - session.LastActivity.Value).TotalHours >= 2)
+        {
+            await ApplyToAllParticipants(
+                session.Id, async (client, participant) =>
+                {
+                    await client.Player.ResumePlayback(
+                        new PlayerResumePlaybackRequest
+                        {
+                            ContextUri = track.Uri,
+                            DeviceId = participant.DeviceId,
+                        }
+                    );
+                    SaveCurrentDeviceIdAsync(client, participant);
+                }
+            );
+        }
+        else
+        {
+            await ApplyToAllParticipants(session.Id, (client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)));
+        }
+
+        await NotifyAllAsync(
+            session.Id,
+            $"{username} добавляет в очередь {track.ToFormattedString()}", ParseMode.MarkdownV2
+        );
+        session.LastActivity = now;
+    }
+
+    private async Task PlayAlbumAsync(Guid sessionId, FullAlbum album, string username)
+    {
+        await ApplyToAllParticipants(
+            sessionId, async (client, participant) =>
+            {
+                await client.Player.SetShuffle(new PlayerShuffleRequest(false));
+                await client.Player.ResumePlayback(
+                    new PlayerResumePlaybackRequest
+                    {
+                        ContextUri = album.Uri,
+                        DeviceId = participant.DeviceId,
+                    }
+                );
+                SaveCurrentDeviceIdAsync(client, participant);
+            }
+        );
+        await NotifyAllAsync(
+            sessionId,
+            $"{username} начинает воспроизведение альбома {album.ToFormattedString()}",
+            ParseMode.MarkdownV2
+        );
+        var session = sessionsService.TryRead(sessionId)!;
+        session.LastActivity = DateTime.UtcNow;
+    }
+
+    private async Task PlayPlaylistAsync(Guid sessionId, FullPlaylist playlist, string username)
+    {
+        await ApplyToAllParticipants(
+            sessionId, async (client, participant) =>
+            {
+                await client.Player.SetShuffle(new PlayerShuffleRequest(false));
+                await client.Player.ResumePlayback(
+                    new PlayerResumePlaybackRequest
+                    {
+                        ContextUri = playlist.Uri,
+                        DeviceId = participant.DeviceId,
+                    }
+                );
+                SaveCurrentDeviceIdAsync(client, participant);
+            }
+        );
+        await NotifyAllAsync(
+            sessionId,
+            $"{username} начинает воспроизведение плейлиста {playlist.ToFormattedString()}",
+            ParseMode.MarkdownV2
+        );
+        var session = sessionsService.TryRead(sessionId)!;
+        session.LastActivity = DateTime.UtcNow;
     }
 
     private async Task HandleForceSyncAsync(long chatId, Guid? currentSessionId, string username)
@@ -315,6 +355,17 @@ public class TelegramBotWorker : ITelegramBotWorker
         await NotifyAllAsync(currentSessionId.Value, $"{username} сбрасывает прогресс воспроизведения трека до {minProgress} мс");
     }
 
+    private async Task SaveCurrentDeviceIdAsync(ISpotifyClient spotifyClient, SessionParticipant participant, bool immediately = false)
+    {
+        if (!immediately)
+        {
+            await Task.Delay(5 * 1000);
+        }
+
+        var playback = await spotifyClient.Player.GetCurrentPlayback();
+        participant.DeviceId = playback.Device.Id;
+    }
+
     private async Task HandlePauseAsync(long chatId, Guid? currentSessionId, string username)
     {
         if (!currentSessionId.HasValue)
@@ -334,8 +385,7 @@ public class TelegramBotWorker : ITelegramBotWorker
             currentSessionId.Value, async (client, participant) =>
             {
                 await client.Player.PausePlayback();
-                var playback = await client.Player.GetCurrentPlayback();
-                participant.DeviceId = playback.Device.Id;
+                await SaveCurrentDeviceIdAsync(client, participant, true);
             }
         );
         await NotifyAllAsync(currentSessionId.Value, $"{username} ставит воспроизведение на паузу");
