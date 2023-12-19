@@ -248,7 +248,10 @@ public class TelegramBotWorker : ITelegramBotWorker
                     await client.Player.ResumePlayback(
                         new PlayerResumePlaybackRequest
                         {
-                            ContextUri = track.Uri,
+                            Uris = new List<string>
+                            {
+                                track.Uri,
+                            },
                             DeviceId = participant.DeviceId,
                         }
                     );
