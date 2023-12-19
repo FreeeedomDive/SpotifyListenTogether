@@ -360,13 +360,20 @@ public class TelegramBotWorker : ITelegramBotWorker
 
     private async Task SaveCurrentDeviceIdAsync(ISpotifyClient spotifyClient, SessionParticipant participant, bool immediately = false)
     {
-        if (!immediately)
+        try
         {
-            await Task.Delay(5 * 1000);
-        }
+            if (!immediately)
+            {
+                await Task.Delay(5 * 1000);
+            }
 
-        var playback = await spotifyClient.Player.GetCurrentPlayback();
-        participant.DeviceId = playback.Device.Id;
+            var playback = await spotifyClient.Player.GetCurrentPlayback();
+            participant.DeviceId = playback.Device.Id;
+        }
+        catch (Exception e)
+        {
+            await loggerClient.ErrorAsync(e, "Failed to save DeviceId");
+        }
     }
 
     private async Task HandlePauseAsync(long chatId, Guid? currentSessionId, string username)
