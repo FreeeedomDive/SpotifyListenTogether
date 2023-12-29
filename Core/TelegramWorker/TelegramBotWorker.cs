@@ -239,8 +239,12 @@ public class TelegramBotWorker : ITelegramBotWorker
     private async Task PlayTrackAsync(Guid sessionId, FullTrack track, string username)
     {
         var session = sessionsService.TryRead(sessionId)!;
-        var now = DateTime.UtcNow;
-        if (session.LastActivity is null || (now - session.LastActivity.Value).TotalHours >= 2)
+        var shouldAddToQueue = await ShouldAddToQueueAsync(sessionId);
+        if (shouldAddToQueue)
+        {
+            await ApplyToAllParticipants(session.Id, (client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)));
+        }
+        else
         {
             await ApplyToAllParticipants(
                 session.Id, async (client, participant) =>
@@ -259,16 +263,22 @@ public class TelegramBotWorker : ITelegramBotWorker
                 }
             );
         }
-        else
-        {
-            await ApplyToAllParticipants(session.Id, (client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)));
-        }
 
         await NotifyAllAsync(
             session.Id,
             $"{username} добавляет в очередь {track.ToFormattedString()}", ParseMode.MarkdownV2
         );
-        session.LastActivity = now;
+    }
+
+    private async Task<bool> ShouldAddToQueueAsync(Guid sessionId)
+    {
+        return (await Task.WhenAll(
+                   GetAllParticipantSessionsAndClients(sessionId)
+                       .Select(x => x.Value.SpotifyClient.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest()))
+               ))
+               .Select(x => x?.Item is not FullTrack fullTrack ? null : fullTrack.Id)
+               .Distinct()
+               .Count() == 1;
     }
 
     private async Task PlayAlbumAsync(Guid sessionId, FullAlbum album, string username)
@@ -280,7 +290,10 @@ public class TelegramBotWorker : ITelegramBotWorker
                 await client.Player.ResumePlayback(
                     new PlayerResumePlaybackRequest
                     {
-                        ContextUri = album.Uri,
+                        Uris = new List<string>
+                        {
+                            album.Uri,
+                        },
                         DeviceId = participant.DeviceId,
                     }
                 );
@@ -293,7 +306,6 @@ public class TelegramBotWorker : ITelegramBotWorker
             ParseMode.MarkdownV2
         );
         var session = sessionsService.TryRead(sessionId)!;
-        session.LastActivity = DateTime.UtcNow;
     }
 
     private async Task PlayPlaylistAsync(Guid sessionId, FullPlaylist playlist, string username)
@@ -305,7 +317,10 @@ public class TelegramBotWorker : ITelegramBotWorker
                 await client.Player.ResumePlayback(
                     new PlayerResumePlaybackRequest
                     {
-                        ContextUri = playlist.Uri,
+                        Uris = new List<string>
+                        {
+                            playlist.Uri!,
+                        },
                         DeviceId = participant.DeviceId,
                     }
                 );
@@ -318,7 +333,6 @@ public class TelegramBotWorker : ITelegramBotWorker
             ParseMode.MarkdownV2
         );
         var session = sessionsService.TryRead(sessionId)!;
-        session.LastActivity = DateTime.UtcNow;
     }
 
     private async Task HandleForceSyncAsync(long chatId, Guid? currentSessionId, string username)
