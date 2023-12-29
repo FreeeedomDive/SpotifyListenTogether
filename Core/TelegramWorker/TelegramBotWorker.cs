@@ -290,10 +290,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                 await client.Player.ResumePlayback(
                     new PlayerResumePlaybackRequest
                     {
-                        Uris = new List<string>
-                        {
-                            album.Uri,
-                        },
+                        ContextUri = album.Uri,
                         DeviceId = participant.DeviceId,
                     }
                 );
@@ -317,10 +314,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                 await client.Player.ResumePlayback(
                     new PlayerResumePlaybackRequest
                     {
-                        Uris = new List<string>
-                        {
-                            playlist.Uri!,
-                        },
+                        ContextUri = playlist.Uri,
                         DeviceId = participant.DeviceId,
                     }
                 );
