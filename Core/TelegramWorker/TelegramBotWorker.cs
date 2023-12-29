@@ -89,7 +89,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                     await HandleNextTrackAsync(chatId, currentSessionId, username);
                     break;
                 case "/auth":
-                    await HandleAuthAsync(chatId);
+                    HandleAuth(chatId);
                     break;
                 case "/_session":
                     await HandleCurrentSessionInfoAsync(chatId, currentSessionId);
@@ -302,7 +302,6 @@ public class TelegramBotWorker : ITelegramBotWorker
             $"{username} начинает воспроизведение альбома {album.ToFormattedString()}",
             ParseMode.MarkdownV2
         );
-        var session = sessionsService.TryRead(sessionId)!;
     }
 
     private async Task PlayPlaylistAsync(Guid sessionId, FullPlaylist playlist, string username)
@@ -326,7 +325,6 @@ public class TelegramBotWorker : ITelegramBotWorker
             $"{username} начинает воспроизведение плейлиста {playlist.ToFormattedString()}",
             ParseMode.MarkdownV2
         );
-        var session = sessionsService.TryRead(sessionId)!;
     }
 
     private async Task HandleForceSyncAsync(long chatId, Guid? currentSessionId, string username)
@@ -455,7 +453,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         await NotifyAllAsync(currentSessionId.Value, $"{username} переключает воспроизведение на следующий трек в очереди");
     }
 
-    private async Task HandleAuthAsync(long chatId)
+    private void HandleAuth(long chatId)
     {
         Task.Run(() => StartSpotifyAuthAsync(chatId, true));
     }
