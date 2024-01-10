@@ -7,7 +7,7 @@ public class SessionsService : ISessionsService
         return sessions.TryGetValue(sessionId, out var session) ? session : null;
     }
 
-    public Guid Create(long authorId)
+    public Guid Create(long authorId, string username)
     {
         var newSession = new Session
         {
@@ -19,6 +19,7 @@ public class SessionsService : ISessionsService
                 {
                     UserId = authorId,
                     DeviceId = null,
+                    UserName = username,
                 },
             },
         };

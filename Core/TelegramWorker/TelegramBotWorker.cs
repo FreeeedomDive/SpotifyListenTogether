@@ -1,3 +1,4 @@
+using System.Text;
 using Core.Extensions;
 using Core.Sessions;
 using Core.Spotify.Client;
@@ -71,7 +72,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                     await HandleStartAsync(chatId);
                     break;
                 case "/create":
-                    await HandleCreateSessionAsync(chatId, currentSessionId);
+                    await HandleCreateSessionAsync(chatId, currentSessionId, username);
                     break;
                 case "/leave":
                     await HandleLeaveSessionAsync(chatId, currentSessionId, username);
@@ -120,7 +121,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         );
     }
 
-    private async Task HandleCreateSessionAsync(long chatId, Guid? currentSessionId)
+    private async Task HandleCreateSessionAsync(long chatId, Guid? currentSessionId, string username)
     {
         if (currentSessionId.HasValue)
         {
@@ -128,7 +129,7 @@ public class TelegramBotWorker : ITelegramBotWorker
             return;
         }
 
-        var newSessionId = sessionsService.Create(chatId);
+        var newSessionId = sessionsService.Create(chatId, username);
         await SendResponseAsync(chatId, $"Создана комната `{newSessionId}`", ParseMode.MarkdownV2);
         // start spotify auth in background to not block telegram messages handler 
         Task.Run(() => StartSpotifyAuthAsync(chatId));
@@ -470,20 +471,25 @@ public class TelegramBotWorker : ITelegramBotWorker
         var tasks = clientsByUserId.Select(
             async pair =>
             {
-                var telegramId = pair.Key;
+                var participant = pair.Value.Participant;
                 var spotifyClient = pair.Value.SpotifyClient;
 
-                var telegramName = (await telegramBotClient.GetChatAsync(telegramId)).Username!;
+                var responseBuilder = new StringBuilder().AppendLine($"*{participant.UserName}*");
                 var spotifyCurrentlyPlaying = await spotifyClient.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest());
-                var spotifyCurrentlyPlayingTrack = spotifyCurrentlyPlaying?.Item as FullTrack;
+                if (spotifyCurrentlyPlaying?.Item is not FullTrack spotifyCurrentlyPlayingTrack)
+                {
+                    return responseBuilder.Append("Сейчас ничего не слушает").ToString();
+                }
                 var currentPlayback = await spotifyClient.Player.GetCurrentPlayback();
+                var device = currentPlayback.Device;
+                var context = currentPlayback.Context;
 
-                return $"*{telegramName}*\n" +
-                       (spotifyCurrentlyPlaying is null || spotifyCurrentlyPlayingTrack is null
-                           ? "No active devices found"
-                           : $"Устройство: {currentPlayback.Device.Name.Escape()}\n"
-                             + $"{spotifyCurrentlyPlayingTrack.ToFormattedString()}\n"
-                             + $@"Прогресс: {TimeSpan.FromMilliseconds(currentPlayback.ProgressMs):m\:ss\.fff}".Escape());
+                return responseBuilder
+                    .AppendLine(spotifyCurrentlyPlayingTrack.ToFormattedString())
+                    .AppendLine($"Контекст: {context.ToFormattedString()}")
+                    .AppendLine($"Устройство: {device.Name.Escape()} ({device.Id})")
+                    .Append($"Сохраненное устройство: {participant.DeviceId ?? "null"}")
+                    .ToString();
             }
         );
         var playbackInfos = await Task.WhenAll(tasks);
