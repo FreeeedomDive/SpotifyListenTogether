@@ -4,24 +4,17 @@ public class SessionsService : ISessionsService
 {
     public Session? TryRead(Guid sessionId)
     {
-        return sessions.TryGetValue(sessionId, out var session) ? session : null;
+        return sessions.GetValueOrDefault(sessionId);
     }
 
-    public Guid Create(long authorId, string username)
+    public Guid Create(SessionParticipant sessionParticipant)
     {
+        var authorId = sessionParticipant.UserId;
         var newSession = new Session
         {
             Id = Guid.NewGuid(),
             AuthorId = authorId,
-            Participants = new List<SessionParticipant>
-            {
-                new()
-                {
-                    UserId = authorId,
-                    DeviceId = null,
-                    UserName = username,
-                },
-            },
+            Participants = new List<SessionParticipant> { sessionParticipant },
         };
         sessions.Add(newSession.Id, newSession);
         sessionsByUser.Add(authorId, newSession.Id);
@@ -33,8 +26,9 @@ public class SessionsService : ISessionsService
         return sessionsByUser.TryGetValue(userId, out var sessionId) ? sessionId : null;
     }
 
-    public void Join(Guid sessionId, long userId)
+    public void Join(Guid sessionId, SessionParticipant participant)
     {
+        var userId = participant.UserId;
         var currentUserSession = Find(userId);
         if (currentUserSession.HasValue)
         {
@@ -48,11 +42,7 @@ public class SessionsService : ISessionsService
             throw new SessionNotFoundException(sessionId);
         }
 
-        session.Participants.Add(new SessionParticipant
-        {
-            UserId = userId,
-            DeviceId = null,
-        });
+        session.Participants.Add(participant);
         sessionsByUser.Add(userId, sessionId);
     }
 

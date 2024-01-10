@@ -129,7 +129,11 @@ public class TelegramBotWorker : ITelegramBotWorker
             return;
         }
 
-        var newSessionId = sessionsService.Create(chatId, username);
+        var newSessionId = sessionsService.Create(new SessionParticipant
+        {
+            UserId = chatId,
+            UserName = username,
+        });
         await SendResponseAsync(chatId, $"Создана комната `{newSessionId}`", ParseMode.MarkdownV2);
         // start spotify auth in background to not block telegram messages handler 
         Task.Run(() => StartSpotifyAuthAsync(chatId));
@@ -175,7 +179,11 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         try
         {
-            sessionsService.Join(sessionIdToJoin, chatId);
+            sessionsService.Join(sessionIdToJoin, new SessionParticipant
+            {
+                UserId = chatId,
+                UserName = username,
+            });
             var session = sessionsService.TryRead(sessionIdToJoin)!;
             await NotifyAllAsync(
                 sessionIdToJoin,
@@ -485,8 +493,8 @@ public class TelegramBotWorker : ITelegramBotWorker
                 var context = currentPlayback.Context;
 
                 return responseBuilder
-                    .AppendLine(spotifyCurrentlyPlayingTrack.ToFormattedString())
-                    .AppendLine($@"Прогресс: {TimeSpan.FromMilliseconds(currentPlayback.ProgressMs):m\:ss\.fff}".Escape())
+                    .Append(spotifyCurrentlyPlayingTrack.ToFormattedString())
+                    .AppendLine($@" - {TimeSpan.FromMilliseconds(currentPlayback.ProgressMs):m\:ss\.fff}".Escape())
                     .AppendLine($"Контекст: {context.ToFormattedString()}")
                     .AppendLine($"Устройство: {device.Name} ({device.Id})".Escape())
                     .Append($"Сохраненное устройство: {participant.DeviceId ?? "null"}")
