@@ -486,8 +486,9 @@ public class TelegramBotWorker : ITelegramBotWorker
 
                 return responseBuilder
                     .AppendLine(spotifyCurrentlyPlayingTrack.ToFormattedString())
+                    .AppendLine($@"Прогресс: {TimeSpan.FromMilliseconds(currentPlayback.ProgressMs):m\:ss\.fff}".Escape())
                     .AppendLine($"Контекст: {context.ToFormattedString()}")
-                    .AppendLine($"Устройство: {device.Name.Escape()} ({device.Id})")
+                    .AppendLine($"Устройство: {device.Name} ({device.Id})".Escape())
                     .Append($"Сохраненное устройство: {participant.DeviceId ?? "null"}")
                     .ToString();
             }
