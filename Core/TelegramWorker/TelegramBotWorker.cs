@@ -354,16 +354,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         );
         var minProgress = allCurrentProgress.Min();
         var result = await ApplyToAllParticipants(
-            currentSessionId.Value, async (client, _) =>
-            {
-                await client.Player.PausePlayback();
-                await client.Player.ResumePlayback(
-                    new PlayerResumePlaybackRequest
-                    {
-                        PositionMs = minProgress,
-                    }
-                );
-            }
+            currentSessionId.Value, (client, _) => client.Player.SeekTo(new PlayerSeekToRequest(minProgress))
         );
         await NotifyAllAsync(currentSessionId.Value, $"{username} сбрасывает прогресс воспроизведения трека до {minProgress} мс\n{result.ToFormattedString()}");
     }
@@ -490,7 +481,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                 return responseBuilder
                     .Append(spotifyCurrentlyPlayingTrack.ToFormattedString())
                     .AppendLine($@" - {TimeSpan.FromMilliseconds(currentPlayback.ProgressMs):m\:ss\.fff}".Escape())
-                    .AppendLine($"Контекст: {context.ToFormattedString()}")
+                    .AppendLine($"Контекст: {(context is null ? "null" : context.ToFormattedString())}")
                     .AppendLine($"Устройство: {device.Name} ({device.Id})".Escape())
                     .Append($"Сохраненное устройство: {participant.DeviceId ?? "null"}")
                     .ToString();
@@ -520,7 +511,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                     await action(x.SpotifyClient, x.Participant);
                     return (x.Participant, true);
                 }
-                catch (Exception e)
+                catch
                 {
                     return (x.Participant, false);
                 }
