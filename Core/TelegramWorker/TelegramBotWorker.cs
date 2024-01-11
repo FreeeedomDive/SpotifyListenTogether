@@ -373,7 +373,7 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         await NotifyAllAsync(
             sessionId,
-            $"{username} начинает воспроизведение [плейлиста]({playlistLink})".Escape(), ParseMode.MarkdownV2
+            $"{username} начинает воспроизведение [плейлиста]({playlistLink})", ParseMode.MarkdownV2
         );
     }
 
