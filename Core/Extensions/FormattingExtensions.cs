@@ -31,6 +31,7 @@ public static class FormattingExtensions
                   .Replace(")", "\\)")
                   .Replace(".", "\\.")
                   .Replace("+", "\\+")
-                  .Replace("!", "\\!");
+                  .Replace("!", "\\!")
+                  .Replace("=", "\\=");
     }
 }
