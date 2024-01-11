@@ -44,7 +44,6 @@ public class TelegramBotWorker : ITelegramBotWorker
             receiverOptions
         );
 
-        Console.WriteLine("Starting bot...");
         await Task.Delay(-1);
     }
 
@@ -95,6 +94,9 @@ public class TelegramBotWorker : ITelegramBotWorker
                 case "/_session":
                     await HandleCurrentSessionInfoAsync(chatId, currentSessionId);
                     break;
+                case "/_spm":
+                    usePlaylistAsContext = !usePlaylistAsContext;
+                    break;
                 default:
                     await HandleMessageAsync(chatId, currentSessionId, messageText, username);
                     break;
@@ -129,11 +131,13 @@ public class TelegramBotWorker : ITelegramBotWorker
             return;
         }
 
-        var newSessionId = sessionsService.Create(new SessionParticipant
-        {
-            UserId = chatId,
-            UserName = username,
-        });
+        var newSessionId = sessionsService.Create(
+            new SessionParticipant
+            {
+                UserId = chatId,
+                UserName = username,
+            }
+        );
         await SendResponseAsync(chatId, $"Создана комната `{newSessionId}`", ParseMode.MarkdownV2);
         // start spotify auth in background to not block telegram messages handler 
         Task.Run(() => StartSpotifyAuthAsync(chatId));
@@ -179,11 +183,13 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         try
         {
-            sessionsService.Join(sessionIdToJoin, new SessionParticipant
-            {
-                UserId = chatId,
-                UserName = username,
-            });
+            sessionsService.Join(
+                sessionIdToJoin, new SessionParticipant
+                {
+                    UserId = chatId,
+                    UserName = username,
+                }
+            );
             var session = sessionsService.TryRead(sessionIdToJoin)!;
             await NotifyAllAsync(
                 sessionIdToJoin,
@@ -237,8 +243,27 @@ public class TelegramBotWorker : ITelegramBotWorker
                 await PlayAlbumAsync(currentSessionId!.Value, album, username);
                 break;
             case SpotifyLinkType.Playlist:
-                var playlist = await spotifyClient.Playlists.Get(spotifyLink.Id);
-                await PlayPlaylistAsync(currentSessionId!.Value, playlist, username);
+                if (usePlaylistAsContext)
+                {
+                    var playlist = await spotifyClient.Playlists.Get(spotifyLink.Id);
+                    await PlayPlaylistAsContextAsync(currentSessionId!.Value, playlist, username);
+                }
+                else
+                {
+                    var playlistTracksPaging = await spotifyClient.Playlists.GetItems(
+                        spotifyLink.Id, new PlaylistGetItemsRequest
+                        {
+                            Offset = 0,
+                            Limit = 50,
+                        }
+                    );
+                    var playlistTracksUris = playlistTracksPaging
+                                         .Items!
+                                         .Select(x => (x.Track as FullTrack)!.Uri)
+                                         .ToList();
+                    await PlayPlaylistAsTracksAsync(currentSessionId!.Value, playlistTracksUris, messageText, username);
+                }
+
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -247,12 +272,11 @@ public class TelegramBotWorker : ITelegramBotWorker
 
     private async Task PlayTrackAsync(Guid sessionId, FullTrack track, string username)
     {
-        var session = sessionsService.TryRead(sessionId)!;
         var shouldAddToQueue = await ShouldAddToQueueAsync(sessionId);
         var result = shouldAddToQueue
-            ? await ApplyToAllParticipants(session.Id, (client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)))
+            ? await ApplyToAllParticipants(sessionId, (client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)))
             : await ApplyToAllParticipants(
-                session.Id, async (client, participant) =>
+                sessionId, async (client, participant) =>
                 {
                     await client.Player.ResumePlayback(
                         new PlayerResumePlaybackRequest
@@ -269,7 +293,7 @@ public class TelegramBotWorker : ITelegramBotWorker
             );
 
         await NotifyAllAsync(
-            session.Id,
+            sessionId,
             $"{username} добавляет в очередь {track.ToFormattedString()}\n{result.ToFormattedString()}", ParseMode.MarkdownV2
         );
     }
@@ -308,7 +332,7 @@ public class TelegramBotWorker : ITelegramBotWorker
         );
     }
 
-    private async Task PlayPlaylistAsync(Guid sessionId, FullPlaylist playlist, string username)
+    private async Task PlayPlaylistAsContextAsync(Guid sessionId, FullPlaylist playlist, string username)
     {
         var result = await ApplyToAllParticipants(
             sessionId, async (client, participant) =>
@@ -328,6 +352,28 @@ public class TelegramBotWorker : ITelegramBotWorker
             sessionId,
             $"{username} начинает воспроизведение плейлиста {playlist.ToFormattedString()}\n{result.ToFormattedString()}",
             ParseMode.MarkdownV2
+        );
+    }
+
+    private async Task PlayPlaylistAsTracksAsync(Guid sessionId, IList<string> playlistTracksUris, string playlistLink, string username)
+    {
+        await ApplyToAllParticipants(
+            sessionId, async (client, participant) =>
+            {
+                await client.Player.ResumePlayback(
+                    new PlayerResumePlaybackRequest
+                    {
+                        Uris = playlistTracksUris,
+                        DeviceId = participant.DeviceId,
+                    }
+                );
+                SaveCurrentDeviceIdAsync(client, participant);
+            }
+        );
+
+        await NotifyAllAsync(
+            sessionId,
+            $"{username} начинает воспроизведение [плейлиста]({playlistLink})".Escape(), ParseMode.MarkdownV2
         );
     }
 
@@ -474,17 +520,18 @@ public class TelegramBotWorker : ITelegramBotWorker
                 {
                     return responseBuilder.Append("Сейчас ничего не слушает").ToString();
                 }
+
                 var currentPlayback = await spotifyClient.Player.GetCurrentPlayback();
                 var device = currentPlayback.Device;
                 var context = currentPlayback.Context;
 
                 return responseBuilder
-                    .Append(spotifyCurrentlyPlayingTrack.ToFormattedString())
-                    .AppendLine($@" - {TimeSpan.FromMilliseconds(currentPlayback.ProgressMs):m\:ss\.fff}".Escape())
-                    .AppendLine($"Контекст: {(context is null ? "null" : context.ToFormattedString())}")
-                    .AppendLine($"Устройство: {device.Name} ({device.Id})".Escape())
-                    .Append($"Сохраненное устройство: {participant.DeviceId ?? "null"}")
-                    .ToString();
+                       .Append(spotifyCurrentlyPlayingTrack.ToFormattedString())
+                       .AppendLine($@" - {TimeSpan.FromMilliseconds(currentPlayback.ProgressMs):m\:ss\.fff}".Escape())
+                       .AppendLine($"Контекст: {(context is null ? "null" : context.ToFormattedString())}")
+                       .AppendLine($"Устройство: {device.Name} ({device.Id})".Escape())
+                       .Append($"Сохраненное устройство: {participant.DeviceId ?? "null"}")
+                       .ToString();
             }
         );
         var playbackInfos = await Task.WhenAll(tasks);
@@ -503,19 +550,23 @@ public class TelegramBotWorker : ITelegramBotWorker
     private async Task<(SessionParticipant Participant, bool Result)[]> ApplyToAllParticipants(Guid currentSessionId, Func<ISpotifyClient, SessionParticipant, Task> action)
     {
         var clients = GetAllParticipantSessionsAndClients(currentSessionId);
-        return await Task.WhenAll(clients.Values.Select(
-            async x =>
-            {
-                try
+        return await Task.WhenAll(
+            clients.Values.Select(
+                async x =>
                 {
-                    await action(x.SpotifyClient, x.Participant);
-                    return (x.Participant, true);
+                    try
+                    {
+                        await action(x.SpotifyClient, x.Participant);
+                        return (x.Participant, true);
+                    }
+                    catch (Exception e)
+                    {
+                        await loggerClient.ErrorAsync(e, "Error in spotify action for user {username}", x.Participant.UserName);
+                        return (x.Participant, false);
+                    }
                 }
-                catch
-                {
-                    return (x.Participant, false);
-                }
-            }));
+            )
+        );
     }
 
     private async Task StartSpotifyAuthAsync(long chatId, bool forceReAuth = false)
@@ -552,8 +603,9 @@ public class TelegramBotWorker : ITelegramBotWorker
         await telegramBotClient.SendTextMessageAsync(chatId, message, parseMode: parseMode);
     }
 
-    private readonly ILoggerClient loggerClient;
+    private static bool usePlaylistAsContext = true;
 
+    private readonly ILoggerClient loggerClient;
     private readonly ISessionsService sessionsService;
     private readonly ISpotifyClientFactory spotifyClientFactory;
     private readonly ISpotifyClientStorage spotifyClientStorage;
