@@ -357,7 +357,7 @@ public class TelegramBotWorker : ITelegramBotWorker
 
     private async Task PlayPlaylistAsTracksAsync(Guid sessionId, IList<string> playlistTracksUris, string playlistLink, string username)
     {
-        await ApplyToAllParticipants(
+        var result = await ApplyToAllParticipants(
             sessionId, async (client, participant) =>
             {
                 await client.Player.ResumePlayback(
@@ -373,7 +373,7 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         await NotifyAllAsync(
             sessionId,
-            $"{username} начинает воспроизведение [плейлиста]({playlistLink})", ParseMode.MarkdownV2
+            $"{username} начинает воспроизведение [плейлиста]({playlistLink})\n{result.ToFormattedString()}", ParseMode.MarkdownV2
         );
     }
 
