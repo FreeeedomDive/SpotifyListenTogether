@@ -98,6 +98,11 @@ public class TelegramBotWorker : ITelegramBotWorker
                     usePlaylistAsContext = !usePlaylistAsContext;
                     break;
                 default:
+                    if (messageText.StartsWith("/statsByArtists"))
+                    {
+                        await HandlePlaylistStatsByArtistsAsync(chatId, currentSessionId, messageText);
+                        break;
+                    }
                     await HandleMessageAsync(chatId, currentSessionId, messageText, username);
                     break;
             }
@@ -250,24 +255,9 @@ public class TelegramBotWorker : ITelegramBotWorker
                 }
                 else
                 {
-                    var total = 10000;
-                    List<string> tracksUris = new();
-                    while (tracksUris.Count < total)
-                    {
-                        var currentPaging = await spotifyClient.Playlists.GetItems(
-                            spotifyLink.Id, new PlaylistGetItemsRequest
-                            {
-                                Offset = tracksUris.Count,
-                                Limit = 100,
-                            }
-                        );
-                        total = currentPaging.Total ?? 0;
-                        var currentPageTracks = currentPaging
-                                                .Items!
-                                                .Select(x => (x.Track as FullTrack)!.Uri)
-                                                .ToList();
-                        tracksUris.AddRange(currentPageTracks);
-                    }
+                    var tracksUris = (await GetTracksInPlaylistAsync(spotifyClient, spotifyLink.Id))
+                        .Select(x => x.Uri)
+                        .ToArray();
 
                     await PlayPlaylistAsTracksAsync(currentSessionId!.Value, tracksUris, messageText, username);
                 }
@@ -379,12 +369,38 @@ public class TelegramBotWorker : ITelegramBotWorker
             }
         );
 
+        var tracksCountText = $"({playlistTracksUris.Count} треков)".Escape();
         await NotifyAllAsync(
             sessionId,
-            $"{username} начинает воспроизведение [плейлиста]({playlistLink})"
-            + $"{$"({playlistTracksUris.Count} треков)".Escape()}\n{result.ToFormattedString()}",
+            $"{username} начинает воспроизведение [плейлиста]({playlistLink}) {tracksCountText}\n{result.ToFormattedString()}",
             ParseMode.MarkdownV2
         );
+    }
+
+    private static async Task<FullTrack[]> GetTracksInPlaylistAsync(ISpotifyClient spotifyClient, string playlistId)
+    {
+        // maximum possible tracks in playlist is 10000
+        var total = 10000;
+        List<FullTrack> tracks = new();
+        while (tracks.Count < total)
+        {
+            var currentPaging = await spotifyClient.Playlists.GetItems(
+                playlistId, new PlaylistGetItemsRequest
+                {
+                    Offset = tracks.Count,
+                    Limit = 100,
+                }
+            );
+            total = currentPaging.Total ?? 0;
+            var currentPageTracks = currentPaging
+                                    .Items!
+                                    .Where(x => x.Track is FullTrack)
+                                    .Select(x => (x.Track as FullTrack)!)
+                                    .ToList();
+            tracks.AddRange(currentPageTracks);
+        }
+
+        return tracks.ToArray();
     }
 
     private async Task HandleForceSyncAsync(long chatId, Guid? currentSessionId, string username)
@@ -546,6 +562,46 @@ public class TelegramBotWorker : ITelegramBotWorker
         );
         var playbackInfos = await Task.WhenAll(tasks);
         await SendResponseAsync(chatId, string.Join("\n\n", playbackInfos), ParseMode.MarkdownV2);
+    }
+
+    private async Task HandlePlaylistStatsByArtistsAsync(long chatId, Guid? currentSessionId, string messageText)
+    {
+        if (!currentSessionId.HasValue)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно войти в комнату для совместного прослушивания");
+            return;
+        }
+
+        var spotifyClient = spotifyClientStorage.TryRead(chatId);
+        if (spotifyClient is null)
+        {
+            await SendResponseAsync(chatId, "Сначала нужно пройти авторизацию в Spotify");
+            return;
+        }
+
+        var parts = messageText.Split();
+        if (parts.Length < 2)
+        {
+            await SendResponseAsync(chatId, "Нет ссылки на плейлист");
+            return;
+        }
+
+        var spotifyLink = await spotifyLinksRecognizeService.TryRecognizeAsync(parts[1]);
+        if (spotifyLink is null || spotifyLink.Type != SpotifyLinkType.Playlist)
+        {
+            await SendResponseAsync(chatId, "Некорректная ссылка на плейлист");
+            return;
+        }
+
+        var tracks = await GetTracksInPlaylistAsync(spotifyClient, spotifyLink.Id);
+        var artists = tracks
+                      .SelectMany(track => track.Artists)
+                      .GroupBy(artist => artist.Name)
+                      .Select(group => (Name: group.Key, Count: group.Count()))
+                      .OrderByDescending(pair => pair.Count)
+                      .Select(pair => $"{pair.Name}: {pair.Count}");
+
+        await SendResponseAsync(chatId, string.Join("\n", artists));
     }
 
     private Dictionary<long, (SessionParticipant Participant, ISpotifyClient SpotifyClient)> GetAllParticipantSessionsAndClients(Guid currentSessionId)
