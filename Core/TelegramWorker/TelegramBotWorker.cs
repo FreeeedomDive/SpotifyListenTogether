@@ -250,18 +250,26 @@ public class TelegramBotWorker : ITelegramBotWorker
                 }
                 else
                 {
-                    var playlistTracksPaging = await spotifyClient.Playlists.GetItems(
-                        spotifyLink.Id, new PlaylistGetItemsRequest
-                        {
-                            Offset = 0,
-                            Limit = 50,
-                        }
-                    );
-                    var playlistTracksUris = playlistTracksPaging
-                                         .Items!
-                                         .Select(x => (x.Track as FullTrack)!.Uri)
-                                         .ToList();
-                    await PlayPlaylistAsTracksAsync(currentSessionId!.Value, playlistTracksUris, messageText, username);
+                    var total = 10000;
+                    List<string> tracksUris = new();
+                    while (tracksUris.Count < total)
+                    {
+                        var currentPaging = await spotifyClient.Playlists.GetItems(
+                            spotifyLink.Id, new PlaylistGetItemsRequest
+                            {
+                                Offset = tracksUris.Count,
+                                Limit = 100,
+                            }
+                        );
+                        total = currentPaging.Total ?? 0;
+                        var currentPageTracks = currentPaging
+                                                .Items!
+                                                .Select(x => (x.Track as FullTrack)!.Uri)
+                                                .ToList();
+                        tracksUris.AddRange(currentPageTracks);
+                    }
+
+                    await PlayPlaylistAsTracksAsync(currentSessionId!.Value, tracksUris, messageText, username);
                 }
 
                 break;
@@ -373,7 +381,9 @@ public class TelegramBotWorker : ITelegramBotWorker
 
         await NotifyAllAsync(
             sessionId,
-            $"{username} начинает воспроизведение [плейлиста]({playlistLink})\n{result.ToFormattedString()}", ParseMode.MarkdownV2
+            $"{username} начинает воспроизведение [плейлиста]({playlistLink})"
+            + $"{$"({playlistTracksUris.Count} треков)".Escape()}\n{result.ToFormattedString()}",
+            ParseMode.MarkdownV2
         );
     }
 
@@ -603,12 +613,12 @@ public class TelegramBotWorker : ITelegramBotWorker
         await telegramBotClient.SendTextMessageAsync(chatId, message, parseMode: parseMode);
     }
 
-    private static bool usePlaylistAsContext = true;
-
     private readonly ILoggerClient loggerClient;
     private readonly ISessionsService sessionsService;
     private readonly ISpotifyClientFactory spotifyClientFactory;
     private readonly ISpotifyClientStorage spotifyClientStorage;
     private readonly ISpotifyLinksRecognizeService spotifyLinksRecognizeService;
     private readonly ITelegramBotClient telegramBotClient;
+
+    private static bool usePlaylistAsContext = true;
 }
