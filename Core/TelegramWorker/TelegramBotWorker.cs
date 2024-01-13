@@ -94,8 +94,8 @@ public class TelegramBotWorker : ITelegramBotWorker
                 case "/_session":
                     await HandleCurrentSessionInfoAsync(chatId, currentSessionId);
                     break;
-                case "/_spm":
-                    usePlaylistAsContext = !usePlaylistAsContext;
+                case "/_fetch":
+                    fetchPlaylist = !fetchPlaylist;
                     break;
                 default:
                     if (messageText.StartsWith("/statsByArtists"))
@@ -103,6 +103,7 @@ public class TelegramBotWorker : ITelegramBotWorker
                         await HandlePlaylistStatsByArtistsAsync(chatId, currentSessionId, messageText);
                         break;
                     }
+
                     await HandleMessageAsync(chatId, currentSessionId, messageText, username);
                     break;
             }
@@ -248,20 +249,8 @@ public class TelegramBotWorker : ITelegramBotWorker
                 await PlayAlbumAsync(currentSessionId!.Value, album, username);
                 break;
             case SpotifyLinkType.Playlist:
-                if (usePlaylistAsContext)
-                {
-                    var playlist = await spotifyClient.Playlists.Get(spotifyLink.Id);
-                    await PlayPlaylistAsContextAsync(currentSessionId!.Value, playlist, username);
-                }
-                else
-                {
-                    var tracksUris = (await GetTracksInPlaylistAsync(spotifyClient, spotifyLink.Id))
-                        .Select(x => x.Uri)
-                        .ToArray();
-
-                    await PlayPlaylistAsTracksAsync(currentSessionId!.Value, tracksUris, messageText, username);
-                }
-
+                var playlist = fetchPlaylist ? await spotifyClient.Playlists.Get(spotifyLink.Id) : null;
+                await PlayPlaylistAsContextAsync(currentSessionId!.Value, playlist, spotifyLink.Id, username);
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -330,8 +319,10 @@ public class TelegramBotWorker : ITelegramBotWorker
         );
     }
 
-    private async Task PlayPlaylistAsContextAsync(Guid sessionId, FullPlaylist playlist, string username)
+    private async Task PlayPlaylistAsContextAsync(Guid sessionId, FullPlaylist? playlist, string playlistId, string? username)
     {
+        var playlistLink = $"https://open.spotify.com/playlist/{playlistId}";
+        var playlistUri = $"spotify:playlist:{playlistId}";
         var result = await ApplyToAllParticipants(
             sessionId, async (client, participant) =>
             {
@@ -339,20 +330,24 @@ public class TelegramBotWorker : ITelegramBotWorker
                 await client.Player.ResumePlayback(
                     new PlayerResumePlaybackRequest
                     {
-                        ContextUri = playlist.Uri,
+                        ContextUri = playlist?.Uri ?? playlistUri,
                         DeviceId = participant.DeviceId,
                     }
                 );
                 SaveCurrentDeviceIdAsync(client, participant);
             }
         );
+        var playlistText = playlist is null
+            ? $"[плейлиста]({playlistLink})"
+            : $"плейлиста {playlist.ToFormattedString()}";
         await NotifyAllAsync(
             sessionId,
-            $"{username} начинает воспроизведение плейлиста {playlist.ToFormattedString()}\n{result.ToFormattedString()}",
+            $"{username} начинает воспроизведение {playlistText}\n{result.ToFormattedString()}",
             ParseMode.MarkdownV2
         );
     }
 
+    /*
     private async Task PlayPlaylistAsTracksAsync(Guid sessionId, IList<string> playlistTracksUris, string playlistLink, string username)
     {
         var result = await ApplyToAllParticipants(
@@ -376,6 +371,7 @@ public class TelegramBotWorker : ITelegramBotWorker
             ParseMode.MarkdownV2
         );
     }
+    */
 
     private static async Task<FullTrack[]> GetTracksInPlaylistAsync(ISpotifyClient spotifyClient, string playlistId)
     {
@@ -676,5 +672,5 @@ public class TelegramBotWorker : ITelegramBotWorker
     private readonly ISpotifyLinksRecognizeService spotifyLinksRecognizeService;
     private readonly ITelegramBotClient telegramBotClient;
 
-    private static bool usePlaylistAsContext = true;
+    private static bool fetchPlaylist = true;
 }
