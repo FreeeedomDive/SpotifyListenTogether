@@ -53,7 +53,6 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
     {
         await server.Stop();
 
-        Console.WriteLine(response.Code);
         var tokenResponse = await new OAuthClient().RequestToken(
             new AuthorizationCodeTokenRequest(
                 spotifySettings.Value.ClientId, spotifySettings.Value.ClientSecret, response.Code, new Uri(spotifySettings.Value.RedirectUri)
