@@ -1,3 +1,5 @@
+using Core.Commands.Factory;
+using Core.Commands.Recognize;
 using Core.Sessions;
 using Core.Settings;
 using Core.Spotify.Client;
@@ -21,6 +23,8 @@ builder.Services.AddTransient<ISpotifyLinksRecognizeService, SpotifyLinksRecogni
 builder.Services.AddSingleton<ISessionsService, SessionsService>();
 builder.Services.AddSingleton<ISpotifyClientStorage, SpotifyClientStorage>();
 builder.Services.AddTransient<ISpotifyClientFactory, SpotifyClientFactory>();
+builder.Services.AddTransient<ICommandsRecognizer, CommandsRecognizer>();
+builder.Services.AddTransient<ICommandsFactory, CommandsFactory>();
 builder.Services.AddTransient<ITelegramBotWorker, TelegramBotWorker>();
 
 builder.Services.AddSingleton<ITelegramBotClient>(
