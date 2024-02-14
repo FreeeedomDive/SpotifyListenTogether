@@ -53,7 +53,7 @@ public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommand
                        // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract - context actually CAN BE null
                        .AppendLine($"Контекст: {(context is null ? "null" : context.ToFormattedString())}")
                        .AppendLine($"Устройство: {device.Name} ({device.Id})".Escape())
-                       .Append($"Сохраненное устройство: {participant.DeviceId ?? "-"}")
+                       .Append($"Сохраненное устройство: {participant.DeviceId ?? "none"}")
                        .ToString();
             }
         );
