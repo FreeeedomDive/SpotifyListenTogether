@@ -11,7 +11,11 @@ using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands;
 
-public class PlayMusicCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAllParticipants, ICommandCanSaveSpotifyDeviceId
+public class PlayMusicCommand
+    : CommandBase,
+      ICommandWithSpotifyAuth,
+      ICommandCanSaveSpotifyDeviceId,
+      ICommandWithAliveDeviceValidation
 {
     public PlayMusicCommand(
         ISpotifyLinksRecognizeService spotifyLinksRecognizeService,

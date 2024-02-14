@@ -9,7 +9,10 @@ using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands;
 
-public class UnpauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAllParticipants
+public class UnpauseCommand
+    : CommandBase,
+      ICommandWithSpotifyAuth,
+      ICommandWithAliveDeviceValidation
 {
     public UnpauseCommand(
         ITelegramBotClient telegramBotClient,

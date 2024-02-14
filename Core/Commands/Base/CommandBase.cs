@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Core.Commands.Base.Interfaces;
+using Core.Extensions;
 using Core.Sessions;
 using Core.Spotify.Client;
 using Telegram.Bot;
@@ -80,6 +81,25 @@ public abstract class CommandBase
                         .Select(participant => (Participant: participant, SpotifyClient: SpotifyClientStorage.TryRead(participant.UserId)))
                         .Where(pair => pair.SpotifyClient is not null)
                         .ToDictionary(pair => pair.Participant.UserId, pair => (pair.Participant, pair.SpotifyClient!));
+            }
+
+            if (this is ICommandWithAliveDeviceValidation commandWithAliveDeviceValidation)
+            {
+                await commandWithAliveDeviceValidation.ApplyToAllParticipants(
+                    async (spotifyClient, participant) =>
+                    {
+                        if (participant.DeviceId is null)
+                        {
+                            return;
+                        }
+
+                        var devices = await spotifyClient.Player.GetAvailableDevices();
+                        if (devices.Devices.All(x => x.Id != participant.DeviceId))
+                        {
+                            participant.DeviceId = null;
+                        }
+                    }, LoggerClient
+                );
             }
 
             await ExecuteAsync();
