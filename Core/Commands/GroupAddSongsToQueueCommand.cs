@@ -38,23 +38,27 @@ public class GroupAddSongsToQueueCommand
     {
         var tasks = Message.Split("\n").Select(x => spotifyLinksRecognizeService.TryRecognizeAsync(x));
         var spotifyLinks = await Task.WhenAll(tasks);
-        var correctLinks = spotifyLinks.Where(x => x?.Type == SpotifyLinkType.Track).ToArray();
+        var tracksIds = spotifyLinks.Where(x => x?.Type == SpotifyLinkType.Track).Select(x => x!.Id).ToList();
+        var tracks = await SpotifyClient.Tracks.GetSeveral(new TracksRequest(tracksIds));
 
         var result = await this.ApplyToAllParticipants(
             async (spotifyClient, participant) =>
             {
-                foreach (var track in correctLinks)
+                foreach (var track in tracks.Tracks)
                 {
-                    await spotifyClient.Player.AddToQueue(new PlayerAddToQueueRequest(track!.Id)
-                    {
-                        DeviceId = participant.DeviceId,
-                    });
+                    await spotifyClient.Player.AddToQueue(
+                        new PlayerAddToQueueRequest(track.Uri)
+                        {
+                            DeviceId = participant.DeviceId,
+                        }
+                    );
                 }
             }, LoggerClient
         );
 
         await NotifyAllAsync(
-            Session, $"{UserName} добавляет в очередь {correctLinks.Length} треков\n{result.ToFormattedString()}", ParseMode.MarkdownV2
+            Session, $"{UserName} добавляет в очередь {tracksIds.Count.ToPluralizedString("трек", "трека", "треков")}\n"
+                     + result.ToFormattedString(), ParseMode.MarkdownV2
         );
     }
 
