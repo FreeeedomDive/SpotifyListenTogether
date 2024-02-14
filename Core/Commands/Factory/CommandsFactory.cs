@@ -29,6 +29,10 @@ public class CommandsFactory : ICommandsFactory
             { CommandType.Pause, () => new PauseCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
             { CommandType.Unpause, () => new UnpauseCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
             { CommandType.NextTrack, () => new NextTrackCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
+            {
+                CommandType.GroupAddToQueue,
+                () => new GroupAddSongsToQueueCommand(spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient)
+            },
             { CommandType.ForceAuth, () => new ForceAuthCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
             { CommandType.SessionInfo, () => new SessionInfoCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
             {

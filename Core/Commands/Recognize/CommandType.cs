@@ -13,6 +13,7 @@ public enum CommandType
     Unpause,
     NextTrack,
     PlayMusic,
+    GroupAddToQueue,
     SessionInfo,
 
     // other commands

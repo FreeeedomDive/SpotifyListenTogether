@@ -73,7 +73,6 @@ public class PlayMusicCommand
         }
     }
 
-
     private async Task PlayTrackAsync(FullTrack track)
     {
         var shouldAddToQueue = await ShouldAddToQueueAsync();
