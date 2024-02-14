@@ -36,6 +36,6 @@ public class ForceSyncCommand : CommandBase, ICommandWithSpotifyAuth, ICommandFo
         var result = await this.ApplyToAllParticipants(
             (client, _) => client.Player.SeekTo(new PlayerSeekToRequest(minProgress)), LoggerClient
         );
-        await NotifyAllAsync($"{UserName} сбрасывает прогресс воспроизведения трека до {minProgress} мс\n{result.ToFormattedString()}");
+        await NotifyAllAsync(Session, $"{UserName} сбрасывает прогресс воспроизведения трека до {minProgress} мс\n{result.ToFormattedString()}");
     }
 }

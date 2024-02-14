@@ -28,6 +28,6 @@ public class NextTrackCommand : CommandBase, ICommandWithSpotifyAuth, ICommandFo
     protected override async Task ExecuteAsync()
     {
         var result = await this.ApplyToAllParticipants((client, _) => client.Player.SkipNext(), LoggerClient);
-        await NotifyAllAsync($"{UserName} переключает воспроизведение на следующий трек в очереди\n{result.ToFormattedString()}");
+        await NotifyAllAsync(Session, $"{UserName} переключает воспроизведение на следующий трек в очереди\n{result.ToFormattedString()}");
     }
 }

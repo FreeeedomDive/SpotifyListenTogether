@@ -27,8 +27,8 @@ public class LeaveSessionCommand : CommandBase, ICommandWithSession
     {
         SessionsService.Leave(Session.Id, UserId);
         await NotifyAllAsync(
-            $"{UserName} выходит из комнаты\n"
-            + $"В этой комнате {Session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
+            Session, $"{UserName} выходит из комнаты\n"
+                     + $"В этой комнате {Session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
         );
         await SendResponseAsync(UserId, $"Ты покинул комнату `{Session.Id}`", ParseMode.MarkdownV2);
     }

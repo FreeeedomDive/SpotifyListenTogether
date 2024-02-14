@@ -95,7 +95,7 @@ public class PlayMusicCommand : CommandBase, ICommandWithSpotifyAuth, ICommandFo
             );
 
         await NotifyAllAsync(
-            $"{UserName} добавляет в очередь {track.ToFormattedString()}\n{result.ToFormattedString()}", ParseMode.MarkdownV2
+            Session, $"{UserName} добавляет в очередь {track.ToFormattedString()}\n{result.ToFormattedString()}", ParseMode.MarkdownV2
         );
     }
 
@@ -128,7 +128,7 @@ public class PlayMusicCommand : CommandBase, ICommandWithSpotifyAuth, ICommandFo
             }, LoggerClient
         );
         await NotifyAllAsync(
-            $"{UserName} начинает воспроизведение альбома {album.ToFormattedString()}\n{result.ToFormattedString()}",
+            Session, $"{UserName} начинает воспроизведение альбома {album.ToFormattedString()}\n{result.ToFormattedString()}",
             ParseMode.MarkdownV2
         );
     }
@@ -157,7 +157,7 @@ public class PlayMusicCommand : CommandBase, ICommandWithSpotifyAuth, ICommandFo
             ? $"[плейлиста]({playlistLink})"
             : $"плейлиста {playlist.ToFormattedString()}";
         await NotifyAllAsync(
-            $"{UserName} начинает воспроизведение {playlistText}\n{result.ToFormattedString()}",
+            Session, $"{UserName} начинает воспроизведение {playlistText}\n{result.ToFormattedString()}",
             ParseMode.MarkdownV2
         );
     }

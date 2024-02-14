@@ -98,7 +98,7 @@ public abstract class CommandBase
         }
         finally
         {
-            await LoggerClient.InfoAsync("{UserName} used command {CommandName}, elapsed {Milliseconds}ms", UserId, CommandName, stopwatch.ElapsedMilliseconds);
+            await LoggerClient.InfoAsync("{UserName} used command {CommandName}, elapsed {Milliseconds}ms", UserName, CommandName, stopwatch.ElapsedMilliseconds);
         }
     }
 
@@ -127,22 +127,17 @@ public abstract class CommandBase
         await TelegramBotClient.SendTextMessageAsync(chatId, message, parseMode: parseMode);
     }
 
-    protected async Task NotifyAllAsync(string message, ParseMode? parseMode = null)
+    protected async Task NotifyAllAsync(Session session, string message, ParseMode? parseMode = null)
     {
-        if (this is not ICommandWithSession commandWithSession)
-        {
-            throw new NotSupportedException($"Command {CommandName} doesn't support notifications for all users");
-        }
-
         await Task.WhenAll(
-            commandWithSession.Session.Participants.Select(
+            session.Participants.Select(
                 participant => SendResponseAsync(participant.UserId, message, parseMode)
             )
         );
     }
 
     protected abstract Task ExecuteAsync();
-    private string CommandName => this.GetType().Name;
+    private string CommandName => GetType().Name;
 
     protected long UserId { get; private set; }
     protected string Message { get; private set; } = null!;

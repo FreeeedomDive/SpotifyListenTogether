@@ -41,8 +41,8 @@ public class JoinSessionCommand : CommandBase, ICommandWithoutSession, IInitiate
             );
             var session = SessionsService.TryRead(sessionIdToJoin)!;
             await NotifyAllAsync(
-                $"{UserName} присоединяется\n"
-                + $"В этой комнате {session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
+                session, $"{UserName} присоединяется\n"
+                         + $"В этой комнате {session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
             );
         }
         catch (SessionNotFoundException)

@@ -34,6 +34,6 @@ public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAll
                 await this.SaveDeviceIdAsync(client, participant, true);
             }, LoggerClient
         );
-        await NotifyAllAsync($"{UserName} ставит воспроизведение на паузу\n{result.ToFormattedString()}");
+        await NotifyAllAsync(Session, $"{UserName} ставит воспроизведение на паузу\n{result.ToFormattedString()}");
     }
 }

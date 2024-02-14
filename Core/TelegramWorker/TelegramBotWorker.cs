@@ -52,16 +52,23 @@ public class TelegramBotWorker : ITelegramBotWorker
         }
 
         var userId = message.Chat.Id;
-
-        var commandType = commandsRecognizer.ParseCommand(message);
-        if (!commandType.HasValue)
+        try
         {
-            await telegramBotClient.SendTextMessageAsync(userId, "Команда не распознана", cancellationToken: cancellationToken);
-            return;
-        }
 
-        var command = commandsFactory.Build(commandType.Value);
-        await command.ExecuteAsync(message);
+            var commandType = commandsRecognizer.ParseCommand(message);
+            if (!commandType.HasValue)
+            {
+                await telegramBotClient.SendTextMessageAsync(userId, "Команда не распознана", cancellationToken: cancellationToken);
+                return;
+            }
+
+            var command = commandsFactory.Build(commandType.Value);
+            await command.ExecuteAsync(message);
+        }
+        catch (Exception exception)
+        {
+            await telegramBotClient.SendTextMessageAsync(userId, exception.Message, cancellationToken: cancellationToken);
+        }
     }
 
     private readonly ICommandsFactory commandsFactory;

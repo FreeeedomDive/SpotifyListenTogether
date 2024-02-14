@@ -20,5 +20,5 @@ public enum CommandType
     ForceAuth,
 
     // stats
-    StatsByArtist,
+    StatsByArtists,
 }

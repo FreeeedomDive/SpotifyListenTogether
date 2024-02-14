@@ -36,6 +36,6 @@ public class UnpauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForA
                     }
                 ), LoggerClient
         );
-        await NotifyAllAsync($"{UserName} возобновляет воспроизведение\n{result.ToFormattedString()}");
+        await NotifyAllAsync(Session, $"{UserName} возобновляет воспроизведение\n{result.ToFormattedString()}");
     }
 }

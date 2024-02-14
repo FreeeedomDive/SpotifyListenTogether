@@ -31,7 +31,10 @@ public class CommandsFactory : ICommandsFactory
             { CommandType.NextTrack, () => new NextTrackCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
             { CommandType.ForceAuth, () => new ForceAuthCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
             { CommandType.SessionInfo, () => new SessionInfoCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
-            //{ CommandType.StatsByArtist, () => new },
+            {
+                CommandType.StatsByArtists,
+                () => new PlaylistStatsByArtistCommand(spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient)
+            },
             {
                 CommandType.PlayMusic,
                 () => new PlayMusicCommand(spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient)
