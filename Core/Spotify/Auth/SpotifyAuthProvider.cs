@@ -1,4 +1,5 @@
 using Core.Settings;
+using Core.Spotify.Auth.Storage;
 using Microsoft.Extensions.Options;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
@@ -7,7 +8,9 @@ namespace Core.Spotify.Auth;
 
 public class SpotifyAuthProvider : ISpotifyAuthProvider
 {
-    public SpotifyAuthProvider(IOptions<SpotifySettings> spotifySettings)
+    public SpotifyAuthProvider(
+        IOptions<SpotifySettings> spotifySettings
+    )
     {
         this.spotifySettings = spotifySettings;
     }
@@ -49,6 +52,16 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
         return spotifyClient;
     }
 
+    public async Task<string?> WaitForTokenAsync()
+    {
+        while (!cancellationTokenSource.IsCancellationRequested && spotifyClient is null)
+        {
+            await Task.Delay(500);
+        }
+
+        return token;
+    }
+
     private async Task OnAuthorizationCodeReceived(object _, AuthorizationCodeResponse response)
     {
         await server.Stop();
@@ -77,6 +90,7 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
     private EmbedIOAuthServer server;
     private CancellationTokenSource cancellationTokenSource;
 
+    private string? token;
     private SpotifyClient? spotifyClient;
 
     private const string LocalCallbackUrl = "http://localhost:5069/callback";

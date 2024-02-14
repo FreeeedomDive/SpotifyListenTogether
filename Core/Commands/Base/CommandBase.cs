@@ -125,7 +125,7 @@ public abstract class CommandBase
     private async Task StartSpotifyAuthAsync()
     {
         var forceReAuth = this is ForceAuthCommand;
-        var spotifyClient = SpotifyClientFactory.CreateOrGet(UserId, forceReAuth);
+        var spotifyClient = await SpotifyClientFactory.CreateOrGetAsync(UserId, forceReAuth);
         if (spotifyClient is null)
         {
             await SendResponseAsync(UserId, "Истекло время для авторизации");
