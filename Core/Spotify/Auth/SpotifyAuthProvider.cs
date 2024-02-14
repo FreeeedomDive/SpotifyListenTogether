@@ -1,5 +1,4 @@
 using Core.Settings;
-using Core.Spotify.Auth.Storage;
 using Microsoft.Extensions.Options;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
@@ -42,19 +41,9 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
         return request.ToUri().AbsoluteUri;
     }
 
-    public async Task<SpotifyClient?> WaitForClientInitializationAsync()
-    {
-        while (!cancellationTokenSource.IsCancellationRequested && spotifyClient is null)
-        {
-            await Task.Delay(500);
-        }
-
-        return spotifyClient;
-    }
-
     public async Task<string?> WaitForTokenAsync()
     {
-        while (!cancellationTokenSource.IsCancellationRequested && spotifyClient is null)
+        while (!cancellationTokenSource.IsCancellationRequested && token is null)
         {
             await Task.Delay(500);
         }
@@ -65,17 +54,7 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
     private async Task OnAuthorizationCodeReceived(object _, AuthorizationCodeResponse response)
     {
         await server.Stop();
-
-        var tokenResponse = await new OAuthClient().RequestToken(
-            new AuthorizationCodeTokenRequest(
-                spotifySettings.Value.ClientId, spotifySettings.Value.ClientSecret, response.Code, new Uri(spotifySettings.Value.RedirectUri)
-            )
-        );
-        var config = SpotifyClientConfig
-                     .CreateDefault()
-                     .WithAuthenticator(new AuthorizationCodeAuthenticator(spotifySettings.Value.ClientId, spotifySettings.Value.ClientSecret, tokenResponse));
-
-        spotifyClient = new SpotifyClient(config);
+        token = response.Code;
         cancellationTokenSource.Cancel();
     }
 
@@ -91,7 +70,6 @@ public class SpotifyAuthProvider : ISpotifyAuthProvider
     private CancellationTokenSource cancellationTokenSource;
 
     private string? token;
-    private SpotifyClient? spotifyClient;
 
     private const string LocalCallbackUrl = "http://localhost:5069/callback";
 }
