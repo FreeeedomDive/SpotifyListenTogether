@@ -35,7 +35,9 @@ public class SpotifyClientFactory : ISpotifyClientFactory
             var token = await tokensRepository.TryReadAsync(telegramUserId);
             if (token is not null)
             {
-                return await CreateClientAsync(token);
+                var client = await CreateClientAsync(token);
+                spotifyClientStorage.CreateOrUpdate(telegramUserId, client);
+                return client;
             }
         }
 
