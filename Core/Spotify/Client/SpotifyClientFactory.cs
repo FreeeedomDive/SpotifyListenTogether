@@ -2,6 +2,7 @@ using Core.Settings;
 using Core.Spotify.Auth;
 using Core.Spotify.Auth.Storage;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using SpotifyAPI.Web;
 using Telegram.Bot;
 
@@ -32,44 +33,47 @@ public class SpotifyClientFactory : ISpotifyClientFactory
                 return existingClient;
             }
 
-            var token = await tokensRepository.TryReadAsync(telegramUserId);
-            if (token is not null)
+            var savedToken = await tokensRepository.TryReadAsync(telegramUserId);
+            if (savedToken is not null)
             {
-                var client = await CreateClientAsync(token);
-                spotifyClientStorage.CreateOrUpdate(telegramUserId, client);
-                return client;
+                var savedClient = CreateClient(JsonConvert.DeserializeObject<AuthorizationCodeTokenResponse>(savedToken)!);
+                spotifyClientStorage.CreateOrUpdate(telegramUserId, savedClient);
+                return savedClient;
             }
         }
 
+        string? token;
         lock (locker)
         {
             var authProvider = new SpotifyAuthProvider(spotifySettings);
             var authLink = authProvider.CreateAuthLinkAsync().GetAwaiter().GetResult();
-            telegramBotClient.SendTextMessageAsync(telegramUserId, $"Теперь нужно авторизоваться в Spotify по этой ссылке: {authLink}\n(ссылка активна минуту)")
-                             .GetAwaiter().GetResult();
-            var token = authProvider.WaitForTokenAsync().GetAwaiter().GetResult();
+            telegramBotClient.SendTextMessageAsync(
+                                 telegramUserId,
+                                 $"Теперь нужно авторизоваться в Spotify по этой ссылке: {authLink}\n(ссылка активна минуту)"
+                             ).GetAwaiter().GetResult();
+            token = authProvider.WaitForTokenAsync().GetAwaiter().GetResult();
             if (token is null)
             {
                 return null;
             }
-
-            var client = CreateClientAsync(token).GetAwaiter().GetResult();
-            spotifyClientStorage.CreateOrUpdate(telegramUserId, client);
-            tokensRepository.CreateOrUpdateAsync(telegramUserId, token).GetAwaiter().GetResult();
-            return client;
         }
-    }
 
-    private async Task<ISpotifyClient> CreateClientAsync(string token)
-    {
         var tokenResponse = await new OAuthClient().RequestToken(
             new AuthorizationCodeTokenRequest(
                 spotifySettings.Value.ClientId, spotifySettings.Value.ClientSecret, token, new Uri(spotifySettings.Value.RedirectUri)
             )
         );
+        var client = CreateClient(tokenResponse);
+        spotifyClientStorage.CreateOrUpdate(telegramUserId, client);
+        await tokensRepository.CreateOrUpdateAsync(telegramUserId, JsonConvert.SerializeObject(tokenResponse, Formatting.Indented));
+        return client;
+    }
+
+    private ISpotifyClient CreateClient(AuthorizationCodeTokenResponse token)
+    {
         var config = SpotifyClientConfig
                      .CreateDefault()
-                     .WithAuthenticator(new AuthorizationCodeAuthenticator(spotifySettings.Value.ClientId, spotifySettings.Value.ClientSecret, tokenResponse));
+                     .WithAuthenticator(new AuthorizationCodeAuthenticator(spotifySettings.Value.ClientId, spotifySettings.Value.ClientSecret, token));
 
         return new SpotifyClient(config);
     }
