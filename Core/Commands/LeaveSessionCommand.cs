@@ -30,7 +30,8 @@ public class LeaveSessionCommand : CommandBase, ICommandWithSession
             Session, $"{UserName} выходит из комнаты\n"
                      + $"В этой комнате {Session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
         );
-        var shouldDestroySession = !Session.Participants.Any();
+        var updatedSession = (await SessionsService.TryReadAsync(Session.Id))!;
+        var shouldDestroySession = !updatedSession.Participants.Any();
         if (shouldDestroySession)
         {
             await SessionsService.DestroyAsync(Session.Id);
