@@ -26,11 +26,11 @@ public class LeaveSessionCommand : CommandBase, ICommandWithSession
     protected override async Task ExecuteAsync()
     {
         await SessionsService.LeaveAsync(Session.Id, UserId);
+        var updatedSession = (await SessionsService.TryReadAsync(Session.Id))!;
         await NotifyAllAsync(
             Session, $"{UserName} выходит из комнаты\n"
-                     + $"В этой комнате {Session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
+                     + $"В этой комнате {updatedSession.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
         );
-        var updatedSession = (await SessionsService.TryReadAsync(Session.Id))!;
         var shouldDestroySession = !updatedSession.Participants.Any();
         if (shouldDestroySession)
         {
