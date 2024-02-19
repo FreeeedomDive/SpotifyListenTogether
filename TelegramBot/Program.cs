@@ -45,5 +45,9 @@ builder.Services.AddSingleton<ITelegramBotClient>(
 );
 
 var app = builder.Build();
+
+var sessionsService = app.Services.GetRequiredService<ISessionsService>();
+await sessionsService.InitializeAsync();
+
 var telegramBotWorker = app.Services.GetRequiredService<ITelegramBotWorker>();
 await telegramBotWorker.StartAsync();
