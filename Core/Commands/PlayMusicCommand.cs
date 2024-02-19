@@ -91,7 +91,7 @@ public class PlayMusicCommand
                             DeviceId = participant.DeviceId,
                         }
                     );
-                    await this.SaveDeviceIdAsync(client, participant, true);
+                    await this.SaveDeviceIdAsync(client, participant);
                 }, LoggerClient
             );
 
@@ -123,7 +123,7 @@ public class PlayMusicCommand
                         DeviceId = participant.DeviceId,
                     }
                 );
-                await this.SaveDeviceIdAsync(client, participant, true);
+                await this.SaveDeviceIdAsync(client, participant);
             }, LoggerClient
         );
         await NotifyAllAsync(
@@ -147,7 +147,7 @@ public class PlayMusicCommand
                         DeviceId = participant.DeviceId,
                     }
                 );
-                await this.SaveDeviceIdAsync(client, participant, true);
+                await this.SaveDeviceIdAsync(client, participant);
             }, LoggerClient
         );
         var playlistText = playlist is null
