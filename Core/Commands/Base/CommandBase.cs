@@ -61,7 +61,7 @@ public abstract class CommandBase
 
             if (this is ICommandWithSpotifyAuth commandWithSpotifyAuth)
             {
-                var spotifyClient = SpotifyClientStorage.TryRead(UserId);
+                var spotifyClient = await SpotifyClientFactory.GetAsync(UserId);
                 if (spotifyClient is null)
                 {
                     await SendResponseAsync(UserId, "Сначала нужно пройти авторизацию в Spotify");
