@@ -22,7 +22,7 @@ public class CreateSessionCommand : CommandBase, ICommandWithoutSession, IInitia
 
     protected override async Task ExecuteAsync()
     {
-        var newSessionId = SessionsService.Create(
+        var newSessionId = await SessionsService.CreateAsync(
             new SessionParticipant
             {
                 UserId = UserId,

@@ -12,7 +12,7 @@ namespace Core.Commands.Base;
 
 public abstract class CommandBase
 {
-    public CommandBase(
+    protected CommandBase(
         ITelegramBotClient telegramBotClient,
         ISessionsService sessionsService,
         ISpotifyClientStorage spotifyClientStorage,
@@ -41,22 +41,21 @@ public abstract class CommandBase
                 throw new NotSupportedException($"Command {CommandName} can't be with and without session simultaneously");
             }
 
-            var sessionId = SessionsService.Find(UserId);
-            if (this is ICommandWithoutSession && sessionId.HasValue)
+            var session = await SessionsService.FindAsync(UserId);
+            if (this is ICommandWithoutSession && session is not null)
             {
-                await SendResponseAsync(UserId, $"Сначала нужно выйти из комнаты `{sessionId.Value}`", ParseMode.MarkdownV2);
+                await SendResponseAsync(UserId, $"Сначала нужно выйти из комнаты `{session.Id}`", ParseMode.MarkdownV2);
                 return;
             }
 
             if (this is ICommandWithSession commandWithSession)
             {
-                if (!sessionId.HasValue)
+                if (session is null)
                 {
                     await SendResponseAsync(UserId, "Сначала нужно войти в комнату для совместного прослушивания");
                     return;
                 }
 
-                var session = SessionsService.TryRead(sessionId.Value)!;
                 commandWithSession.Session = session;
             }
 
@@ -75,8 +74,7 @@ public abstract class CommandBase
             if (this is ICommandForAllParticipants commandForAllParticipants)
             {
                 commandForAllParticipants.UserIdToSpotifyClient =
-                    commandForAllParticipants
-                        .Session
+                    session!
                         .Participants
                         .Select(participant => (Participant: participant, SpotifyClient: SpotifyClientStorage.TryRead(participant.UserId)))
                         .Where(pair => pair.SpotifyClient is not null)
@@ -110,6 +108,11 @@ public abstract class CommandBase
                 Task.Run(StartSpotifyAuthAsync);
 #pragma warning restore CS4014
             }
+
+            if (session is not null)
+            {
+                await SessionsService.UpdateAsync(session);
+            }
         }
         catch (Exception exception)
         {
@@ -137,7 +140,7 @@ public abstract class CommandBase
             var spotifyUser = await spotifyClient.UserProfile.Current();
             await SendResponseAsync(UserId, $"Успешная авторизация в Spotify как {spotifyUser.DisplayName}");
         }
-        catch(Exception exception)
+        catch (Exception exception)
         {
             await LoggerClient.ErrorAsync(exception, "Exception in auth");
         }

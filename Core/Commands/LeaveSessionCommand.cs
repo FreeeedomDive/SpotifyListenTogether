@@ -21,11 +21,11 @@ public class LeaveSessionCommand : CommandBase, ICommandWithSession
     {
     }
 
-    public Session Session { get; set; }
+    public Session Session { get; set; } = null!;
 
     protected override async Task ExecuteAsync()
     {
-        SessionsService.Leave(Session.Id, UserId);
+        await SessionsService.LeaveAsync(Session.Id, UserId);
         await NotifyAllAsync(
             Session, $"{UserName} выходит из комнаты\n"
                      + $"В этой комнате {Session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"

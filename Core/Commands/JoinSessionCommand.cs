@@ -32,14 +32,14 @@ public class JoinSessionCommand : CommandBase, ICommandWithoutSession, IInitiate
 
         try
         {
-            SessionsService.Join(
+            await SessionsService.JoinAsync(
                 sessionIdToJoin, new SessionParticipant
                 {
                     UserId = UserId,
                     UserName = UserName,
                 }
             );
-            var session = SessionsService.TryRead(sessionIdToJoin)!;
+            var session = (await SessionsService.TryReadAsync(sessionIdToJoin))!;
             await NotifyAllAsync(
                 session, $"{UserName} присоединяется\n"
                          + $"В этой комнате {session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
