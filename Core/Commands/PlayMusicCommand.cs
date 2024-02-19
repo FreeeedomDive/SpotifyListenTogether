@@ -92,7 +92,7 @@ public class PlayMusicCommand
                         }
                     );
 #pragma warning disable CS4014
-                    this.SaveDeviceIdAsync(client, participant);
+                    this.SaveDeviceIdAsync(client, participant, true);
 #pragma warning restore CS4014
                 }, LoggerClient
             );
@@ -126,7 +126,7 @@ public class PlayMusicCommand
                     }
                 );
 #pragma warning disable CS4014
-                this.SaveDeviceIdAsync(client, participant);
+                this.SaveDeviceIdAsync(client, participant, true);
 #pragma warning restore CS4014
             }, LoggerClient
         );
@@ -152,7 +152,7 @@ public class PlayMusicCommand
                     }
                 );
 #pragma warning disable CS4014
-                this.SaveDeviceIdAsync(client, participant);
+                this.SaveDeviceIdAsync(client, participant, true);
 #pragma warning restore CS4014
             }, LoggerClient
         );
