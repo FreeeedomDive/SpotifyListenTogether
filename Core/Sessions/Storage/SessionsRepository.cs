@@ -34,6 +34,10 @@ public class SessionsRepository : ISessionsRepository
 
     public async Task UpdateAsync(Session session)
     {
+        if (await TryReadAsync(session.Id) is null)
+        {
+            return;
+        }
         await sqlRepository.UpdateAsync(session.Id, x => x.SerializedSession = JsonConvert.SerializeObject(session, Formatting.Indented));
     }
 
