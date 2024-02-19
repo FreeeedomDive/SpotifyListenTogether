@@ -1,3 +1,5 @@
+using Newtonsoft.Json;
+using SpotifyAPI.Web;
 using SqlRepositoryBase.Core.Repository;
 
 namespace Core.Spotify.Auth.Storage;
@@ -9,14 +11,16 @@ public class TokensRepository : ITokensRepository
         this.sqlRepository = sqlRepository;
     }
 
-    public async Task<string?> TryReadAsync(long userId)
+    public async Task<AuthorizationCodeTokenResponse?> TryReadAsync(long userId)
     {
         var result = await sqlRepository.FindAsync(x => x.UserId == userId);
-        return result.FirstOrDefault()?.Token;
+        var token = result.FirstOrDefault()?.Token;
+        return token is null ? null : JsonConvert.DeserializeObject<AuthorizationCodeTokenResponse>(token)!;
     }
 
-    public async Task CreateOrUpdateAsync(long userId, string token)
+    public async Task CreateOrUpdateAsync(long userId, AuthorizationCodeTokenResponse token)
     {
+        var jsonToken = JsonConvert.SerializeObject(token, Formatting.Indented);
         var existing = (await sqlRepository.FindAsync(x => x.UserId == userId)).FirstOrDefault();
         if (existing is null)
         {
@@ -25,13 +29,13 @@ public class TokensRepository : ITokensRepository
                 {
                     Id = Guid.NewGuid(),
                     UserId = userId,
-                    Token = token,
+                    Token = jsonToken,
                 }
             );
             return;
         }
 
-        await sqlRepository.UpdateAsync(existing.Id, x => x.Token = token);
+        await sqlRepository.UpdateAsync(existing.Id, x => x.Token = jsonToken);
     }
 
     private readonly ISqlRepository<TokenStorageElement> sqlRepository;
