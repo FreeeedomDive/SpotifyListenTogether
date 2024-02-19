@@ -32,12 +32,10 @@ public class SpotifyClientFactory : ISpotifyClientFactory
                 return existingClient;
             }
 
-            var savedToken = await tokensRepository.TryReadAsync(telegramUserId);
-            if (savedToken is not null)
+            var restoredClient = await RestoreClientAsync(telegramUserId);
+            if (restoredClient is not null)
             {
-                var savedClient = CreateClient(savedToken);
-                spotifyClientStorage.CreateOrUpdate(telegramUserId, savedClient);
-                return savedClient;
+                return restoredClient;
             }
         }
 
@@ -66,6 +64,19 @@ public class SpotifyClientFactory : ISpotifyClientFactory
         spotifyClientStorage.CreateOrUpdate(telegramUserId, client);
         await tokensRepository.CreateOrUpdateAsync(telegramUserId, tokenResponse);
         return client;
+    }
+
+    private async Task<ISpotifyClient?> RestoreClientAsync(long telegramUserId)
+    {
+        var savedToken = await tokensRepository.TryReadAsync(telegramUserId);
+        if (savedToken is null)
+        {
+            return null;
+        }
+
+        var savedClient = CreateClient(savedToken);
+        spotifyClientStorage.CreateOrUpdate(telegramUserId, savedClient);
+        return savedClient;
     }
 
     private ISpotifyClient CreateClient(AuthorizationCodeTokenResponse token)
