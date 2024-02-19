@@ -1,3 +1,4 @@
+using Core.Sessions.Storage;
 using Core.Spotify.Auth.Storage;
 using Microsoft.EntityFrameworkCore;
 using SqlRepositoryBase.Core.ContextBuilders;
@@ -11,4 +12,5 @@ public class DatabaseContext : PostgreSqlDbContext
     }
 
     public DbSet<TokenStorageElement> Tokens { get; set; }
+    public DbSet<SessionStorageElement> Sessions { get; set; }
 }
