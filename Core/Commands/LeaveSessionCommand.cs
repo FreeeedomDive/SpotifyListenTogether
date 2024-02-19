@@ -30,6 +30,16 @@ public class LeaveSessionCommand : CommandBase, ICommandWithSession
             Session, $"{UserName} выходит из комнаты\n"
                      + $"В этой комнате {Session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
         );
-        await SendResponseAsync(UserId, $"Ты покинул комнату `{Session.Id}`", ParseMode.MarkdownV2);
+        var shouldDestroySession = !Session.Participants.Any();
+        if (shouldDestroySession)
+        {
+            await SessionsService.DestroyAsync(Session.Id);
+        }
+
+        await SendResponseAsync(
+            UserId,
+            $"Ты покинул комнату `{Session.Id}`" + (shouldDestroySession ? "\nТы был последним слушателем в этой комнате, она будет удалена" : string.Empty),
+            ParseMode.MarkdownV2
+        );
     }
 }
