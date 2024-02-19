@@ -6,7 +6,7 @@ public class SpotifyClientStorage : ISpotifyClientStorage
 {
     public ISpotifyClient? TryRead(long telegramUserId)
     {
-        return spotifyClients.TryGetValue(telegramUserId, out var spotifyClient) ? spotifyClient : null;
+        return spotifyClients.GetValueOrDefault(telegramUserId);
     }
 
     public void CreateOrUpdate(long telegramUserId, ISpotifyClient spotifyClient)

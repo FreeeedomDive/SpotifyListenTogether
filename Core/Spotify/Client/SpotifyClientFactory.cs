@@ -1,5 +1,6 @@
 using Core.Settings;
 using Core.Spotify.Auth;
+using Core.Spotify.Auth.Storage;
 using Microsoft.Extensions.Options;
 using SpotifyAPI.Web;
 using Telegram.Bot;
@@ -11,37 +12,80 @@ public class SpotifyClientFactory : ISpotifyClientFactory
     public SpotifyClientFactory(
         ISpotifyClientStorage spotifyClientStorage,
         ITelegramBotClient telegramBotClient,
+        ITokensRepository tokensRepository,
         IOptions<SpotifySettings> spotifySettings
     )
     {
         this.spotifyClientStorage = spotifyClientStorage;
         this.telegramBotClient = telegramBotClient;
+        this.tokensRepository = tokensRepository;
         this.spotifySettings = spotifySettings;
     }
 
-    public ISpotifyClient? CreateOrGet(long telegramUserId, bool forceReAuth = false)
+    public async Task<ISpotifyClient?> CreateOrGetAsync(long telegramUserId, bool forceReAuth = false)
     {
-        var existingClient = spotifyClientStorage.TryRead(telegramUserId);
-        if (existingClient is not null && !forceReAuth)
+        if (!forceReAuth)
         {
-            return existingClient;
+            var existingClient = spotifyClientStorage.TryRead(telegramUserId);
+            if (existingClient is not null)
+            {
+                return existingClient;
+            }
+
+            var restoredClient = await RestoreClientAsync(telegramUserId);
+            if (restoredClient is not null)
+            {
+                return restoredClient;
+            }
         }
 
+        string? token;
         lock (locker)
         {
             var authProvider = new SpotifyAuthProvider(spotifySettings);
             var authLink = authProvider.CreateAuthLinkAsync().GetAwaiter().GetResult();
-            telegramBotClient.SendTextMessageAsync(telegramUserId, $"Теперь нужно авторизоваться в Spotify по этой ссылке: {authLink}\n(ссылка активна минуту)")
-                             .GetAwaiter().GetResult();
-            var client = authProvider.WaitForClientInitializationAsync().GetAwaiter().GetResult();
-            if (client is null)
+            telegramBotClient.SendTextMessageAsync(
+                telegramUserId,
+                $"Теперь нужно авторизоваться в Spotify по этой ссылке: {authLink}\n(ссылка активна минуту)"
+            ).GetAwaiter().GetResult();
+            token = authProvider.WaitForTokenAsync().GetAwaiter().GetResult();
+            if (token is null)
             {
                 return null;
             }
-
-            spotifyClientStorage.CreateOrUpdate(telegramUserId, client);
-            return client;
         }
+
+        var tokenResponse = await new OAuthClient().RequestToken(
+            new AuthorizationCodeTokenRequest(
+                spotifySettings.Value.ClientId, spotifySettings.Value.ClientSecret, token, new Uri(spotifySettings.Value.RedirectUri)
+            )
+        );
+        var client = CreateClient(tokenResponse);
+        spotifyClientStorage.CreateOrUpdate(telegramUserId, client);
+        await tokensRepository.CreateOrUpdateAsync(telegramUserId, tokenResponse);
+        return client;
+    }
+
+    private async Task<ISpotifyClient?> RestoreClientAsync(long telegramUserId)
+    {
+        var savedToken = await tokensRepository.TryReadAsync(telegramUserId);
+        if (savedToken is null)
+        {
+            return null;
+        }
+
+        var savedClient = CreateClient(savedToken);
+        spotifyClientStorage.CreateOrUpdate(telegramUserId, savedClient);
+        return savedClient;
+    }
+
+    private ISpotifyClient CreateClient(AuthorizationCodeTokenResponse token)
+    {
+        var config = SpotifyClientConfig
+                     .CreateDefault()
+                     .WithAuthenticator(new AuthorizationCodeAuthenticator(spotifySettings.Value.ClientId, spotifySettings.Value.ClientSecret, token));
+
+        return new SpotifyClient(config);
     }
 
     private readonly object locker = new();
@@ -49,4 +93,5 @@ public class SpotifyClientFactory : ISpotifyClientFactory
     private readonly ISpotifyClientStorage spotifyClientStorage;
     private readonly IOptions<SpotifySettings> spotifySettings;
     private readonly ITelegramBotClient telegramBotClient;
+    private readonly ITokensRepository tokensRepository;
 }

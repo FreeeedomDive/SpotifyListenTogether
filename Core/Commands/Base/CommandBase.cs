@@ -124,16 +124,23 @@ public abstract class CommandBase
 
     private async Task StartSpotifyAuthAsync()
     {
-        var forceReAuth = this is ForceAuthCommand;
-        var spotifyClient = SpotifyClientFactory.CreateOrGet(UserId, forceReAuth);
-        if (spotifyClient is null)
+        try
         {
-            await SendResponseAsync(UserId, "Истекло время для авторизации");
-            return;
-        }
+            var forceReAuth = this is ForceAuthCommand;
+            var spotifyClient = await SpotifyClientFactory.CreateOrGetAsync(UserId, forceReAuth);
+            if (spotifyClient is null)
+            {
+                await SendResponseAsync(UserId, "Истекло время для авторизации");
+                return;
+            }
 
-        var spotifyUser = await spotifyClient.UserProfile.Current();
-        await SendResponseAsync(UserId, $"Успешная авторизация в Spotify как {spotifyUser.DisplayName}");
+            var spotifyUser = await spotifyClient.UserProfile.Current();
+            await SendResponseAsync(UserId, $"Успешная авторизация в Spotify как {spotifyUser.DisplayName}");
+        }
+        catch(Exception exception)
+        {
+            await LoggerClient.ErrorAsync(exception, "Exception in auth");
+        }
     }
 
     protected async Task SendResponseAsync(long chatId, string message, ParseMode? parseMode = null)

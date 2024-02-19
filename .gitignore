@@ -2,3 +2,4 @@
 bin
 obj
 TelegramBot/appsettings.Production.json
+PostgreSqlMigrationsApplier/appsettings.Production.json
