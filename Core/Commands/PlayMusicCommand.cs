@@ -91,9 +91,7 @@ public class PlayMusicCommand
                             DeviceId = participant.DeviceId,
                         }
                     );
-#pragma warning disable CS4014
-                    this.SaveDeviceIdAsync(client, participant, true);
-#pragma warning restore CS4014
+                    await this.SaveDeviceIdAsync(client, participant, true);
                 }, LoggerClient
             );
 
@@ -125,9 +123,7 @@ public class PlayMusicCommand
                         DeviceId = participant.DeviceId,
                     }
                 );
-#pragma warning disable CS4014
-                this.SaveDeviceIdAsync(client, participant, true);
-#pragma warning restore CS4014
+                await this.SaveDeviceIdAsync(client, participant, true);
             }, LoggerClient
         );
         await NotifyAllAsync(
@@ -151,9 +147,7 @@ public class PlayMusicCommand
                         DeviceId = participant.DeviceId,
                     }
                 );
-#pragma warning disable CS4014
-                this.SaveDeviceIdAsync(client, participant, true);
-#pragma warning restore CS4014
+                await this.SaveDeviceIdAsync(client, participant, true);
             }, LoggerClient
         );
         var playlistText = playlist is null
