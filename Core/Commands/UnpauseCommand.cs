@@ -35,10 +35,10 @@ public class UnpauseCommand
         if (Session.Context?.ContextUri is not null)
         {
             playerResumePlaybackRequest.ContextUri = Session.Context.ContextUri;
+            playerResumePlaybackRequest.PositionMs = Session.Context.PositionMs;
             playerResumePlaybackRequest.OffsetParam = new PlayerResumePlaybackRequest.Offset
             {
                 Uri = Session.Context.TrackUri,
-                Position = Session.Context.PositionMs,
             };
         }
         var result = await this.ApplyToAllParticipants(
