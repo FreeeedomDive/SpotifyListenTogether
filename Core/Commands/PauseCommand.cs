@@ -36,5 +36,23 @@ public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAll
             }, LoggerClient
         );
         await NotifyAllAsync(Session, $"{UserName} ставит воспроизведение на паузу\n{result.ToFormattedString()}");
+        try
+        {
+            var playback = await SpotifyClient.Player.GetCurrentPlayback();
+            if (playback.Context is null)
+            {
+                return;
+            }
+            Session.Context = new SessionContext
+            {
+                ContextUri = playback.Context.Uri,
+                TrackUri = (playback.Item as FullTrack)!.Uri,
+                PositionMs = playback.ProgressMs,
+            };
+        }
+        catch(Exception e)
+        {
+            await LoggerClient.ErrorAsync(e, "Failed to save context");
+        }
     }
 }

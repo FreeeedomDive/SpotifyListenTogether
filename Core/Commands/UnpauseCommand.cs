@@ -31,18 +31,22 @@ public class UnpauseCommand
 
     protected override async Task ExecuteAsync()
     {
+        var playerResumePlaybackRequest = new PlayerResumePlaybackRequest();
+        if (Session.Context?.ContextUri is not null)
+        {
+            playerResumePlaybackRequest.ContextUri = Session.Context.ContextUri;
+            playerResumePlaybackRequest.OffsetParam = new PlayerResumePlaybackRequest.Offset
+            {
+                Uri = Session.Context.TrackUri,
+                Position = Session.Context.PositionMs,
+            };
+        }
         var result = await this.ApplyToAllParticipants(
             (client, participant) =>
-                client.Player.ResumePlayback(
-                    new PlayerResumePlaybackRequest
-                    {
-                        DeviceId = participant.DeviceId,
-                        OffsetParam = new PlayerResumePlaybackRequest.Offset
-                        {
-                            
-                        }
-                    }
-                ), LoggerClient
+            {
+                playerResumePlaybackRequest.DeviceId = participant.DeviceId;
+                return client.Player.ResumePlayback(playerResumePlaybackRequest);
+            }, LoggerClient
         );
         await NotifyAllAsync(Session, $"{UserName} возобновляет воспроизведение\n{result.ToFormattedString()}");
     }
