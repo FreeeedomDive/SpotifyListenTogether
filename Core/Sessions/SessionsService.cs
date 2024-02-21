@@ -1,3 +1,4 @@
+using Core.Extensions;
 using Core.Sessions.Models;
 using Core.Sessions.Storage;
 
@@ -90,7 +91,7 @@ public class SessionsService : ISessionsService
         var session = await sessionsRepository.TryReadAsync(sessionId);
         if (session is not null)
         {
-            session.Participants.RemoveAll(x => x.UserId == userId);
+            session.Leave(userId);
             await sessionsRepository.UpdateAsync(session);
         }
 
