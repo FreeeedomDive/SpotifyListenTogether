@@ -1,3 +1,4 @@
+using Core.Sessions.Models;
 using Newtonsoft.Json;
 using SqlRepositoryBase.Core.Repository;
 

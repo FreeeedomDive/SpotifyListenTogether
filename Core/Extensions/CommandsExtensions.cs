@@ -1,5 +1,6 @@
 using Core.Commands.Base.Interfaces;
 using Core.Sessions;
+using Core.Sessions.Models;
 using SpotifyAPI.Web;
 using TelemetryApp.Api.Client.Log;
 

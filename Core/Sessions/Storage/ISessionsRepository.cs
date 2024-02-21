@@ -1,3 +1,5 @@
+using Core.Sessions.Models;
+
 namespace Core.Sessions.Storage;
 
 public interface ISessionsRepository

@@ -1,4 +1,5 @@
 using Core.Sessions;
+using Core.Sessions.Models;
 using SpotifyAPI.Web;
 
 namespace Core.Commands.Base.Interfaces;

@@ -2,6 +2,7 @@ using Core.Commands.Base;
 using Core.Commands.Base.Interfaces;
 using Core.Extensions;
 using Core.Sessions;
+using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Spotify.Links;
 using SpotifyAPI.Web;

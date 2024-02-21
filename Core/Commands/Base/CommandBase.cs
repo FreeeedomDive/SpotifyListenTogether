@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Core.Commands.Base.Interfaces;
 using Core.Extensions;
 using Core.Sessions;
+using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Telegram.Bot;
 using Telegram.Bot.Types;

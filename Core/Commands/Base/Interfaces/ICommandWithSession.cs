@@ -1,4 +1,5 @@
 using Core.Sessions;
+using Core.Sessions.Models;
 
 namespace Core.Commands.Base.Interfaces;
 

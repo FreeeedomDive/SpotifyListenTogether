@@ -1,3 +1,4 @@
+using Core.Sessions.Models;
 using Core.Sessions.Storage;
 
 namespace Core.Sessions;
