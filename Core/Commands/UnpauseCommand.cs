@@ -2,6 +2,7 @@ using Core.Commands.Base;
 using Core.Commands.Base.Interfaces;
 using Core.Extensions;
 using Core.Sessions;
+using Core.Sessions.Models;
 using Core.Spotify.Client;
 using SpotifyAPI.Web;
 using Telegram.Bot;
@@ -30,14 +31,22 @@ public class UnpauseCommand
 
     protected override async Task ExecuteAsync()
     {
+        var playerResumePlaybackRequest = new PlayerResumePlaybackRequest();
+        if (Session.Context?.ContextUri is not null)
+        {
+            playerResumePlaybackRequest.ContextUri = Session.Context.ContextUri;
+            playerResumePlaybackRequest.PositionMs = Session.Context.PositionMs;
+            playerResumePlaybackRequest.OffsetParam = new PlayerResumePlaybackRequest.Offset
+            {
+                Uri = Session.Context.TrackUri,
+            };
+        }
         var result = await this.ApplyToAllParticipants(
             (client, participant) =>
-                client.Player.ResumePlayback(
-                    new PlayerResumePlaybackRequest
-                    {
-                        DeviceId = participant.DeviceId,
-                    }
-                ), LoggerClient
+            {
+                playerResumePlaybackRequest.DeviceId = participant.DeviceId;
+                return client.Player.ResumePlayback(playerResumePlaybackRequest);
+            }, LoggerClient
         );
         await NotifyAllAsync(Session, $"{UserName} возобновляет воспроизведение\n{result.ToFormattedString()}");
     }

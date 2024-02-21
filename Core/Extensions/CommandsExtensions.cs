@@ -1,5 +1,5 @@
 using Core.Commands.Base.Interfaces;
-using Core.Sessions;
+using Core.Sessions.Models;
 using SpotifyAPI.Web;
 using TelemetryApp.Api.Client.Log;
 
@@ -36,17 +36,11 @@ public static class CommandsExtensions
     public static async Task SaveDeviceIdAsync(
         this ICommandCanSaveSpotifyDeviceId commandCanSaveSpotifyDeviceId,
         ISpotifyClient spotifyClient,
-        SessionParticipant participant,
-        bool immediately = false
+        SessionParticipant participant
     )
     {
         try
         {
-            if (!immediately)
-            {
-                await Task.Delay(5 * 1000);
-            }
-
             var playback = await spotifyClient.Player.GetCurrentPlayback();
             participant.DeviceId = playback.Device.Id;
         }

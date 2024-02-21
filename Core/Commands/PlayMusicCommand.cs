@@ -2,6 +2,7 @@ using Core.Commands.Base;
 using Core.Commands.Base.Interfaces;
 using Core.Extensions;
 using Core.Sessions;
+using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Spotify.Links;
 using SpotifyAPI.Web;
@@ -91,9 +92,7 @@ public class PlayMusicCommand
                             DeviceId = participant.DeviceId,
                         }
                     );
-#pragma warning disable CS4014
-                    this.SaveDeviceIdAsync(client, participant);
-#pragma warning restore CS4014
+                    await this.SaveDeviceIdAsync(client, participant);
                 }, LoggerClient
             );
 
@@ -125,9 +124,7 @@ public class PlayMusicCommand
                         DeviceId = participant.DeviceId,
                     }
                 );
-#pragma warning disable CS4014
-                this.SaveDeviceIdAsync(client, participant);
-#pragma warning restore CS4014
+                await this.SaveDeviceIdAsync(client, participant);
             }, LoggerClient
         );
         await NotifyAllAsync(
@@ -151,9 +148,7 @@ public class PlayMusicCommand
                         DeviceId = participant.DeviceId,
                     }
                 );
-#pragma warning disable CS4014
-                this.SaveDeviceIdAsync(client, participant);
-#pragma warning restore CS4014
+                await this.SaveDeviceIdAsync(client, participant);
             }, LoggerClient
         );
         var playlistText = playlist is null

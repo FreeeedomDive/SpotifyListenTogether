@@ -2,6 +2,7 @@ using Core.Commands.Factory;
 using Core.Commands.Recognize;
 using Core.Database;
 using Core.Sessions;
+using Core.Sessions.Storage;
 using Core.Settings;
 using Core.Spotify.Auth.Storage;
 using Core.Spotify.Client;
@@ -26,6 +27,7 @@ builder.Services.ConfigureConnectionStringFromAppSettings(builder.Configuration.
        .ConfigureDbContextFactory(connectionString => new DatabaseContext(connectionString))
        .ConfigurePostgreSql();
 builder.Services.AddTransient<ITokensRepository, TokensRepository>();
+builder.Services.AddTransient<ISessionsRepository, SessionsRepository>();
 builder.Services.AddTransient<ISpotifyLinksRecognizeService, SpotifyLinksRecognizeService>();
 builder.Services.AddSingleton<ISessionsService, SessionsService>();
 builder.Services.AddSingleton<ISpotifyClientStorage, SpotifyClientStorage>();
@@ -43,5 +45,9 @@ builder.Services.AddSingleton<ITelegramBotClient>(
 );
 
 var app = builder.Build();
+
+var sessionsService = app.Services.GetRequiredService<ISessionsService>();
+await sessionsService.InitializeAsync();
+
 var telegramBotWorker = app.Services.GetRequiredService<ITelegramBotWorker>();
 await telegramBotWorker.StartAsync();

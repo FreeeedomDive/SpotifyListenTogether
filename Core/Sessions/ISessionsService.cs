@@ -1,11 +1,15 @@
+using Core.Sessions.Models;
+
 namespace Core.Sessions;
 
 public interface ISessionsService
 {
-    Session? TryRead(Guid sessionId);
-    Guid Create(SessionParticipant sessionParticipant);
-    Guid? Find(long userId);
-    void Join(Guid sessionId, SessionParticipant participant);
-    void Leave(Guid sessionId, long userId);
-    void Destroy(Guid sessionId);
+    Task InitializeAsync();
+    Task<Session?> TryReadAsync(Guid sessionId);
+    Task<Guid> CreateAsync(SessionParticipant sessionParticipant);
+    Task<Session?> FindAsync(long userId);
+    Task UpdateAsync(Session session);
+    Task JoinAsync(Guid sessionId, SessionParticipant participant);
+    Task LeaveAsync(Guid sessionId, long userId);
+    Task DestroyAsync(Guid sessionId);
 }

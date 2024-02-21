@@ -22,20 +22,30 @@ public class SpotifyClientFactory : ISpotifyClientFactory
         this.spotifySettings = spotifySettings;
     }
 
+    public async Task<ISpotifyClient?> GetAsync(long telegramUserId)
+    {
+        var existingClient = spotifyClientStorage.TryRead(telegramUserId);
+        if (existingClient is not null)
+        {
+            return existingClient;
+        }
+
+        var restoredClient = await RestoreClientAsync(telegramUserId);
+        if (restoredClient is not null)
+        {
+            spotifyClientStorage.CreateOrUpdate(telegramUserId, restoredClient);
+        }
+        return restoredClient;
+    }
+
     public async Task<ISpotifyClient?> CreateOrGetAsync(long telegramUserId, bool forceReAuth = false)
     {
         if (!forceReAuth)
         {
-            var existingClient = spotifyClientStorage.TryRead(telegramUserId);
+            var existingClient = await GetAsync(telegramUserId);
             if (existingClient is not null)
             {
                 return existingClient;
-            }
-
-            var restoredClient = await RestoreClientAsync(telegramUserId);
-            if (restoredClient is not null)
-            {
-                return restoredClient;
             }
         }
 

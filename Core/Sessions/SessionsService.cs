@@ -1,13 +1,34 @@
+using Core.Extensions;
+using Core.Sessions.Models;
+using Core.Sessions.Storage;
+
 namespace Core.Sessions;
 
 public class SessionsService : ISessionsService
 {
-    public Session? TryRead(Guid sessionId)
+    public SessionsService(ISessionsRepository sessionsRepository)
     {
-        return sessions.GetValueOrDefault(sessionId);
+        this.sessionsRepository = sessionsRepository;
     }
 
-    public Guid Create(SessionParticipant sessionParticipant)
+    public async Task InitializeAsync()
+    {
+        var sessions = await sessionsRepository.ReadAllAsync();
+        foreach (var session in sessions)
+        {
+            foreach (var participant in session.Participants)
+            {
+                sessionsByUser.Add(participant.UserId, session.Id);
+            }
+        }
+    }
+
+    public async Task<Session?> TryReadAsync(Guid sessionId)
+    {
+        return await sessionsRepository.TryReadAsync(sessionId);
+    }
+
+    public async Task<Guid> CreateAsync(SessionParticipant sessionParticipant)
     {
         var authorId = sessionParticipant.UserId;
         var newSession = new Session
@@ -16,41 +37,62 @@ public class SessionsService : ISessionsService
             AuthorId = authorId,
             Participants = new List<SessionParticipant> { sessionParticipant },
         };
-        sessions.Add(newSession.Id, newSession);
+        await sessionsRepository.CreateAsync(newSession);
         sessionsByUser.Add(authorId, newSession.Id);
         return newSession.Id;
     }
 
-    public Guid? Find(long userId)
+    public async Task<Session?> FindAsync(long userId)
     {
-        return sessionsByUser.TryGetValue(userId, out var sessionId) ? sessionId : null;
-    }
-
-    public void Join(Guid sessionId, SessionParticipant participant)
-    {
-        var userId = participant.UserId;
-        var currentUserSession = Find(userId);
-        if (currentUserSession.HasValue)
+        var sessionId = sessionsByUser.TryGetValue(userId, out var x) ? x : (Guid?)null;
+        if (sessionId is null)
         {
-            var oldSession = sessions[currentUserSession.Value];
-            oldSession.Participants.RemoveAll(x => x.UserId == userId);
+            return null;
         }
 
-        var session = TryRead(sessionId);
+        var session = await sessionsRepository.TryReadAsync(sessionId.Value);
+        if (session is not null)
+        {
+            return session;
+        }
+
+        sessionsByUser.Remove(userId);
+        return null;
+    }
+
+    public async Task UpdateAsync(Session session)
+    {
+        await sessionsRepository.UpdateAsync(session);
+    }
+
+    public async Task JoinAsync(Guid sessionId, SessionParticipant participant)
+    {
+        var userId = participant.UserId;
+        var currentUserSession = await FindAsync(userId);
+        if (currentUserSession is not null)
+        {
+            currentUserSession.Participants.RemoveAll(x => x.UserId == userId);
+            await sessionsRepository.UpdateAsync(currentUserSession);
+        }
+
+        var session = await TryReadAsync(sessionId);
         if (session is null)
         {
             throw new SessionNotFoundException(sessionId);
         }
 
         session.Participants.Add(participant);
+        await sessionsRepository.UpdateAsync(session);
         sessionsByUser.Add(userId, sessionId);
     }
 
-    public void Leave(Guid sessionId, long userId)
+    public async Task LeaveAsync(Guid sessionId, long userId)
     {
-        if (sessions.TryGetValue(sessionId, out var session))
+        var session = await sessionsRepository.TryReadAsync(sessionId);
+        if (session is not null)
         {
-            session.Participants.RemoveAll(x => x.UserId == userId);
+            session.Leave(userId);
+            await sessionsRepository.UpdateAsync(session);
         }
 
         if (sessionsByUser.TryGetValue(userId, out var userSessionId) && userSessionId == sessionId)
@@ -59,10 +101,10 @@ public class SessionsService : ISessionsService
         }
     }
 
-    public void Destroy(Guid sessionId)
+    public async Task DestroyAsync(Guid sessionId)
     {
-        var sessionFound = sessions.TryGetValue(sessionId, out var session);
-        if (!sessionFound || session is null)
+        var session = await sessionsRepository.TryReadAsync(sessionId);
+        if (session is null)
         {
             return;
         }
@@ -72,9 +114,9 @@ public class SessionsService : ISessionsService
             sessionsByUser.Remove(participant.UserId);
         }
 
-        sessions.Remove(sessionId);
+        await sessionsRepository.DeleteAsync(sessionId);
     }
 
-    private readonly Dictionary<Guid, Session> sessions = new();
     private readonly Dictionary<long, Guid> sessionsByUser = new();
+    private readonly ISessionsRepository sessionsRepository;
 }

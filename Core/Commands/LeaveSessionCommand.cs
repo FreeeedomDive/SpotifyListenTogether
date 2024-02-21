@@ -2,6 +2,7 @@ using Core.Commands.Base;
 using Core.Commands.Base.Interfaces;
 using Core.Extensions;
 using Core.Sessions;
+using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
@@ -21,15 +22,26 @@ public class LeaveSessionCommand : CommandBase, ICommandWithSession
     {
     }
 
-    public Session Session { get; set; }
+    public Session Session { get; set; } = null!;
 
     protected override async Task ExecuteAsync()
     {
-        SessionsService.Leave(Session.Id, UserId);
+        Session.Leave(UserId);
+        await SessionsService.LeaveAsync(Session.Id, UserId);
         await NotifyAllAsync(
             Session, $"{UserName} выходит из комнаты\n"
                      + $"В этой комнате {Session.Participants.Count.ToPluralizedString("слушатель", "слушателя", "слушателей")}"
         );
-        await SendResponseAsync(UserId, $"Ты покинул комнату `{Session.Id}`", ParseMode.MarkdownV2);
+        var shouldDestroySession = !Session.Participants.Any();
+        if (shouldDestroySession)
+        {
+            await SessionsService.DestroyAsync(Session.Id);
+        }
+
+        await SendResponseAsync(
+            UserId,
+            $"Ты покинул комнату `{Session.Id}`" + (shouldDestroySession ? "\nТы был последним слушателем в этой комнате, она будет удалена" : string.Empty),
+            ParseMode.MarkdownV2
+        );
     }
 }

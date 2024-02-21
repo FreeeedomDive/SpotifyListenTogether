@@ -2,6 +2,7 @@ using Core.Commands.Base;
 using Core.Commands.Base.Interfaces;
 using Core.Extensions;
 using Core.Sessions;
+using Core.Sessions.Models;
 using Core.Spotify.Client;
 using SpotifyAPI.Web;
 using Telegram.Bot;
@@ -31,9 +32,27 @@ public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAll
             async (client, participant) =>
             {
                 await client.Player.PausePlayback();
-                await this.SaveDeviceIdAsync(client, participant, true);
+                await this.SaveDeviceIdAsync(client, participant);
             }, LoggerClient
         );
         await NotifyAllAsync(Session, $"{UserName} ставит воспроизведение на паузу\n{result.ToFormattedString()}");
+        try
+        {
+            var playback = await SpotifyClient.Player.GetCurrentPlayback();
+            if (playback.Context is null)
+            {
+                return;
+            }
+            Session.Context = new SessionContext
+            {
+                ContextUri = playback.Context.Uri,
+                TrackUri = (playback.Item as FullTrack)!.Uri,
+                PositionMs = playback.ProgressMs,
+            };
+        }
+        catch(Exception e)
+        {
+            await LoggerClient.ErrorAsync(e, "Failed to save context");
+        }
     }
 }
