@@ -47,15 +47,16 @@ public class PlayMusicCommand
                 return;
             }
 
-            await PlayTrackAsync(track);
+            await PlayTrackAsync(track.Id, track);
             return;
         }
 
         switch (spotifyLink.Type)
         {
             case SpotifyLinkType.Track:
-                var track = await SpotifyClient.Tracks.Get(spotifyLink.Id);
-                await PlayTrackAsync(track);
+                // TODO: остановлено до лучших времен, когда метод получения трека перестанет отдавать 403
+                // var track = await SpotifyClient.Tracks.Get(spotifyLink.Id);
+                await PlayTrackAsync(spotifyLink.Id);
                 break;
             case SpotifyLinkType.Artist:
                 await SendResponseAsync(UserId, "Воспроизведение исполнителей не поддерживается, советуем найти плейлист с этим исполнителем и воспроизвести его.");
@@ -65,19 +66,22 @@ public class PlayMusicCommand
                 await PlayAlbumAsync(album);
                 break;
             case SpotifyLinkType.Playlist:
-                var playlist = await SpotifyClient.Playlists.Get(spotifyLink.Id);
-                await PlayPlaylistAsContextAsync(playlist, spotifyLink.Id);
+                // TODO: остановлено до лучших времен, когда метод получения плейлиста перестанет отдавать 403
+                // var playlist = await SpotifyClient.Playlists.Get(spotifyLink.Id);
+                await PlayPlaylistAsContextAsync(spotifyLink.Id);
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
         }
     }
 
-    private async Task PlayTrackAsync(FullTrack track)
+    private async Task PlayTrackAsync(string trackId, FullTrack? track = null)
     {
+        var playlistLink = $"https://open.spotify.com/track/{trackId}";
+        var playlistUri = $"spotify:track:{trackId}";
         var shouldAddToQueue = await ShouldAddToQueueAsync();
         var result = shouldAddToQueue
-            ? await this.ApplyToAllParticipants((client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(track.Uri)), LoggerClient)
+            ? await this.ApplyToAllParticipants((client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(playlistUri)), LoggerClient)
             : await this.ApplyToAllParticipants(
                 async (client, participant) =>
                 {
@@ -86,7 +90,7 @@ public class PlayMusicCommand
                         {
                             Uris = new List<string>
                             {
-                                track.Uri,
+                                playlistUri,
                             },
                             DeviceId = participant.DeviceId,
                         }
@@ -95,8 +99,11 @@ public class PlayMusicCommand
                 }, LoggerClient
             );
 
+        var text = track is null
+            ? $"[трек]({playlistLink})"
+            : track.ToFormattedString();
         await NotifyAllAsync(
-            Session, $"{UserName} добавляет в очередь {track.ToFormattedString()}\n{result.ToFormattedString()}", ParseMode.MarkdownV2
+            Session, $"{UserName} добавляет в очередь {text}\n{result.ToFormattedString()}", ParseMode.MarkdownV2
         );
     }
 
@@ -132,7 +139,7 @@ public class PlayMusicCommand
         );
     }
 
-    private async Task PlayPlaylistAsContextAsync(FullPlaylist? playlist, string playlistId)
+    private async Task PlayPlaylistAsContextAsync(string playlistId, FullPlaylist? playlist = null)
     {
         var playlistLink = $"https://open.spotify.com/playlist/{playlistId}";
         var playlistUri = $"spotify:playlist:{playlistId}";
