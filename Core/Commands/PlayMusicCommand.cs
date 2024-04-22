@@ -65,9 +65,8 @@ public class PlayMusicCommand
                 await PlayAlbumAsync(album);
                 break;
             case SpotifyLinkType.Playlist:
-                // TODO: остановлено до лучших времен, когда метод получения плейлиста перестанет отдавать 403
-                // var playlist = FetchPlaylist ? await SpotifyClient.Playlists.Get(spotifyLink.Id) : null;
-                await PlayPlaylistAsContextAsync(null, spotifyLink.Id);
+                var playlist = await SpotifyClient.Playlists.Get(spotifyLink.Id);
+                await PlayPlaylistAsContextAsync(playlist, spotifyLink.Id);
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
