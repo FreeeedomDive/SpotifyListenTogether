@@ -4,6 +4,11 @@ namespace Core.Extensions;
 
 public static class FormattingExtensions
 {
+    public static string ToTrackUri(this string track)
+    {
+        return $"spotify:track:{track}";
+    }
+    
     public static string ToFormattedString(this FullTrack track)
     {
         return $"[{(track.Artists.First().Name + " - " + track.Name).Escape()}]({track.ExternalUrls["spotify"]})";

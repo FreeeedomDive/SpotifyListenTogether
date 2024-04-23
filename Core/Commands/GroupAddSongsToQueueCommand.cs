@@ -39,16 +39,15 @@ public class GroupAddSongsToQueueCommand
     {
         var tasks = Message.Split("\n").Select(x => spotifyLinksRecognizeService.TryRecognizeAsync(x));
         var spotifyLinks = await Task.WhenAll(tasks);
-        var tracksIds = spotifyLinks.Where(x => x?.Type == SpotifyLinkType.Track).Select(x => x!.Id).ToList();
-        var tracks = await SpotifyClient.Tracks.GetSeveral(new TracksRequest(tracksIds));
+        var tracksUris = spotifyLinks.Where(x => x?.Type == SpotifyLinkType.Track).Select(x => x!.Id.ToTrackUri()).ToArray();
 
         var result = await this.ApplyToAllParticipants(
             async (spotifyClient, participant) =>
             {
-                foreach (var track in tracks.Tracks)
+                foreach (var uri in tracksUris)
                 {
                     await spotifyClient.Player.AddToQueue(
-                        new PlayerAddToQueueRequest(track.Uri)
+                        new PlayerAddToQueueRequest(uri)
                         {
                             DeviceId = participant.DeviceId,
                         }
@@ -58,7 +57,7 @@ public class GroupAddSongsToQueueCommand
         );
 
         await NotifyAllAsync(
-            Session, $"{UserName} добавляет в очередь {tracksIds.Count.ToPluralizedString("трек", "трека", "треков")}\n"
+            Session, $"{UserName} добавляет в очередь {tracksUris.Length.ToPluralizedString("трек", "трека", "треков")}\n"
                      + result.ToFormattedString(), ParseMode.MarkdownV2
         );
     }

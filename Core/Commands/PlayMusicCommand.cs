@@ -77,11 +77,10 @@ public class PlayMusicCommand
 
     private async Task PlayTrackAsync(string trackId, FullTrack? track = null)
     {
-        var playlistLink = $"https://open.spotify.com/track/{trackId}";
-        var playlistUri = $"spotify:track:{trackId}";
+        var trackLink = $"https://open.spotify.com/track/{trackId}";
         var shouldAddToQueue = await ShouldAddToQueueAsync();
         var result = shouldAddToQueue
-            ? await this.ApplyToAllParticipants((client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(playlistUri)), LoggerClient)
+            ? await this.ApplyToAllParticipants((client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(trackId.ToTrackUri())), LoggerClient)
             : await this.ApplyToAllParticipants(
                 async (client, participant) =>
                 {
@@ -90,7 +89,7 @@ public class PlayMusicCommand
                         {
                             Uris = new List<string>
                             {
-                                playlistUri,
+                                trackId.ToTrackUri(),
                             },
                             DeviceId = participant.DeviceId,
                         }
@@ -100,7 +99,7 @@ public class PlayMusicCommand
             );
 
         var text = track is null
-            ? $"[трек]({playlistLink})"
+            ? $"[трек]({trackLink})"
             : track.ToFormattedString();
         await NotifyAllAsync(
             Session, $"{UserName} добавляет в очередь {text}\n{result.ToFormattedString()}", ParseMode.MarkdownV2
