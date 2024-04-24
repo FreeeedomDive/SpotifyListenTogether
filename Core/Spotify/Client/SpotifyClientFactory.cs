@@ -22,6 +22,16 @@ public class SpotifyClientFactory : ISpotifyClientFactory
         this.spotifySettings = spotifySettings;
     }
 
+    public async Task InitializeAllSavedClientsAsync()
+    {
+        var savedTokens = await tokensRepository.ReadAllAsync();
+        foreach (var (userId, token) in savedTokens)
+        {
+            var savedClient = CreateClient(token);
+            spotifyClientStorage.CreateOrUpdate(userId, savedClient);
+        }
+    }
+
     public async Task<ISpotifyClient?> GetAsync(long telegramUserId)
     {
         var existingClient = spotifyClientStorage.TryRead(telegramUserId);

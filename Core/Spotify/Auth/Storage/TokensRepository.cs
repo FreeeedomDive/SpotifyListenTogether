@@ -11,6 +11,12 @@ public class TokensRepository : ITokensRepository
         this.sqlRepository = sqlRepository;
     }
 
+    public async Task<(long UserId, AuthorizationCodeTokenResponse token)[]> ReadAllAsync()
+    {
+        var results = await sqlRepository.ReadAllAsync();
+        return results.Select(x => (x.UserId, JsonConvert.DeserializeObject<AuthorizationCodeTokenResponse>(x.Token)!)).ToArray();
+    }
+
     public async Task<AuthorizationCodeTokenResponse?> TryReadAsync(long userId)
     {
         var result = await sqlRepository.FindAsync(x => x.UserId == userId);

@@ -49,5 +49,8 @@ var app = builder.Build();
 var sessionsService = app.Services.GetRequiredService<ISessionsService>();
 await sessionsService.InitializeAsync();
 
+var spotifyClientFactory = app.Services.GetRequiredService<ISpotifyClientFactory>();
+await spotifyClientFactory.InitializeAllSavedClientsAsync();
+
 var telegramBotWorker = app.Services.GetRequiredService<ITelegramBotWorker>();
 await telegramBotWorker.StartAsync();
