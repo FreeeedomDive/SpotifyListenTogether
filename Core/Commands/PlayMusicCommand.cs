@@ -58,17 +58,18 @@ public class PlayMusicCommand
                 // var track = await SpotifyClient.Tracks.Get(spotifyLink.Id);
                 await PlayTrackAsync(spotifyLink.Id);
                 break;
-            case SpotifyLinkType.Artist:
-                await SendResponseAsync(UserId, "Воспроизведение исполнителей не поддерживается, советуем найти плейлист с этим исполнителем и воспроизвести его.");
-                break;
             case SpotifyLinkType.Album:
-                var album = await SpotifyClient.Albums.Get(spotifyLink.Id);
-                await PlayAlbumAsync(album);
+                // TODO: остановлено до лучших времен, когда метод получения альбома перестанет отдавать 403
+                // var album = await SpotifyClient.Albums.Get(spotifyLink.Id);
+                await PlayAlbumAsync(spotifyLink.Id);
                 break;
             case SpotifyLinkType.Playlist:
                 // TODO: остановлено до лучших времен, когда метод получения плейлиста перестанет отдавать 403
                 // var playlist = await SpotifyClient.Playlists.Get(spotifyLink.Id);
                 await PlayPlaylistAsContextAsync(spotifyLink.Id);
+                break;
+            case SpotifyLinkType.Artist:
+                await SendResponseAsync(UserId, "Воспроизведение исполнителей не поддерживается, советуем найти плейлист с этим исполнителем и воспроизвести его.");
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -116,8 +117,10 @@ public class PlayMusicCommand
                .Count() == 1;
     }
 
-    private async Task PlayAlbumAsync(FullAlbum album)
+    private async Task PlayAlbumAsync(string albumId, FullAlbum? album = null)
     {
+        var albumLink = $"https://open.spotify.com/album/{albumId}";
+        var albumUri = $"spotify:album:{albumId}";
         var result = await this.ApplyToAllParticipants(
             async (client, participant) =>
             {
@@ -125,15 +128,18 @@ public class PlayMusicCommand
                 await client.Player.ResumePlayback(
                     new PlayerResumePlaybackRequest
                     {
-                        ContextUri = album.Uri,
+                        ContextUri = albumUri,
                         DeviceId = participant.DeviceId,
                     }
                 );
                 await this.SaveDeviceIdAsync(client, participant);
             }, LoggerClient
         );
+        var albumText = album is null
+            ? $"[альбома]({albumLink})"
+            : $"альбома {album.ToFormattedString()}";
         await NotifyAllAsync(
-            Session, $"{UserName} начинает воспроизведение альбома {album.ToFormattedString()}\n{result.ToFormattedString()}",
+            Session, $"{UserName} начинает воспроизведение {albumText}\n{result.ToFormattedString()}",
             ParseMode.MarkdownV2
         );
     }
