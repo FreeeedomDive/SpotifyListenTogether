@@ -3,6 +3,7 @@ using Core.Commands.Recognize;
 using Core.Sessions;
 using Core.Spotify.Client;
 using Core.Spotify.Links;
+using Core.Whitelist;
 using Telegram.Bot;
 using TelemetryApp.Api.Client.Log;
 
@@ -16,12 +17,14 @@ public class CommandsFactory : ICommandsFactory
         ISpotifyClientFactory spotifyClientFactory,
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyLinksRecognizeService spotifyLinksRecognizeService,
+        IWhitelistService whitelistService,
         ILoggerClient loggerClient
     )
     {
         commandBuilders = new Dictionary<CommandType, Func<CommandBase>>
         {
             { CommandType.Start, () => new StartCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
+            { CommandType.Whitelist, () => new WhitelistCommand(whitelistService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
             { CommandType.CreateSession, () => new CreateSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
             { CommandType.LeaveSession, () => new LeaveSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
             { CommandType.JoinSession, () => new JoinSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },

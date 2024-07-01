@@ -1,5 +1,6 @@
 using Core.Commands.Factory;
 using Core.Commands.Recognize;
+using Core.Whitelist;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -14,13 +15,15 @@ public class TelegramBotWorker : ITelegramBotWorker
         ITelegramBotClient telegramBotClient,
         ILoggerClient loggerClient,
         ICommandsRecognizer commandsRecognizer,
-        ICommandsFactory commandsFactory
+        ICommandsFactory commandsFactory,
+        IWhitelistService whitelistService
     )
     {
         this.telegramBotClient = telegramBotClient;
         this.loggerClient = loggerClient;
         this.commandsRecognizer = commandsRecognizer;
         this.commandsFactory = commandsFactory;
+        this.whitelistService = whitelistService;
     }
 
     public async Task StartAsync()
@@ -54,6 +57,11 @@ public class TelegramBotWorker : ITelegramBotWorker
         var userId = message.Chat.Id;
         try
         {
+            var isWhitelisted = await whitelistService.IsUserWhitelistedAsync(userId);
+            if (!isWhitelisted)
+            {
+                return;
+            }
 
             var commandType = commandsRecognizer.ParseCommand(message);
             if (!commandType.HasValue)
@@ -75,4 +83,5 @@ public class TelegramBotWorker : ITelegramBotWorker
     private readonly ICommandsRecognizer commandsRecognizer;
     private readonly ILoggerClient loggerClient;
     private readonly ITelegramBotClient telegramBotClient;
+    private readonly IWhitelistService whitelistService;
 }

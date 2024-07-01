@@ -18,6 +18,7 @@ public class CommandsRecognizer : ICommandsRecognizer
                                .AddIf(messageText.StartsWith("/unpause"), CommandType.Unpause)
                                .AddIf(messageText.StartsWith("/next"), CommandType.NextTrack)
                                .AddIf(messageText.StartsWith("/auth"), CommandType.ForceAuth)
+                               .AddIf(messageText.StartsWith("/_wl"), CommandType.Whitelist)
                                .AddIf(messageText.StartsWith("/_session"), CommandType.SessionInfo)
                                .AddIf(messageText.StartsWith("/statsByArtists"), CommandType.StatsByArtists)
                                .AddIf(messageText.Split("\n").Length > 1, CommandType.GroupAddToQueue)

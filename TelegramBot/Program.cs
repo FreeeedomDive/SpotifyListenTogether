@@ -8,6 +8,7 @@ using Core.Spotify.Auth.Storage;
 using Core.Spotify.Client;
 using Core.Spotify.Links;
 using Core.TelegramWorker;
+using Core.Whitelist;
 using Microsoft.Extensions.Options;
 using SqlRepositoryBase.Configuration.Extensions;
 using Telegram.Bot;
@@ -34,6 +35,7 @@ builder.Services.AddSingleton<ISpotifyClientStorage, SpotifyClientStorage>();
 builder.Services.AddTransient<ISpotifyClientFactory, SpotifyClientFactory>();
 builder.Services.AddTransient<ICommandsRecognizer, CommandsRecognizer>();
 builder.Services.AddTransient<ICommandsFactory, CommandsFactory>();
+builder.Services.AddTransient<IWhitelistService, WhitelistService>();
 builder.Services.AddTransient<ITelegramBotWorker, TelegramBotWorker>();
 
 builder.Services.AddSingleton<ITelegramBotClient>(
