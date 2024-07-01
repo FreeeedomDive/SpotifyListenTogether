@@ -4,6 +4,7 @@ using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Client;
+using Core.Whitelist;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -18,9 +19,11 @@ public abstract class CommandBase
         ISessionsService sessionsService,
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
+        IWhitelistService whitelistService,
         ILoggerClient loggerClient
     )
     {
+        this.whitelistService = whitelistService;
         TelegramBotClient = telegramBotClient;
         SessionsService = sessionsService;
         SpotifyClientStorage = spotifyClientStorage;
@@ -36,6 +39,12 @@ public abstract class CommandBase
         var stopwatch = Stopwatch.StartNew();
         try
         {
+            var isWhitelisted = await whitelistService.IsUserWhitelistedAsync(UserId);
+            if (!isWhitelisted && this is not WhitelistCommand)
+            {
+                return;
+            }
+
             // ReSharper disable once SuspiciousTypeConversion.Global - this is added for future validations
             if (this is ICommandWithoutSession && this is ICommandWithSession)
             {
@@ -179,4 +188,5 @@ public abstract class CommandBase
     private ISpotifyClientStorage SpotifyClientStorage { get; }
     private ISpotifyClientFactory SpotifyClientFactory { get; }
     protected ILoggerClient LoggerClient { get; }
+    private readonly IWhitelistService whitelistService;
 }

@@ -4,6 +4,7 @@ using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Client;
+using Core.Whitelist;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using TelemetryApp.Api.Client.Log;
@@ -17,8 +18,9 @@ public class LeaveSessionCommand : CommandBase, ICommandWithSession
         ISessionsService sessionsService,
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
+        IWhitelistService whitelistService,
         ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient)
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
     {
     }
 

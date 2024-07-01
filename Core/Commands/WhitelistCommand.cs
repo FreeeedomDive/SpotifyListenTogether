@@ -10,13 +10,13 @@ namespace Core.Commands;
 public class WhitelistCommand : CommandBase
 {
     public WhitelistCommand(
-        IWhitelistService whitelistService,
         ITelegramBotClient telegramBotClient,
         ISessionsService sessionsService,
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
+        IWhitelistService whitelistService,
         ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient)
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
     {
         this.whitelistService = whitelistService;
     }

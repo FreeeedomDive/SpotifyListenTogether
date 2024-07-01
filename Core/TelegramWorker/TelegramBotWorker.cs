@@ -57,12 +57,6 @@ public class TelegramBotWorker : ITelegramBotWorker
         var userId = message.Chat.Id;
         try
         {
-            var isWhitelisted = await whitelistService.IsUserWhitelistedAsync(userId);
-            if (!isWhitelisted)
-            {
-                return;
-            }
-
             var commandType = commandsRecognizer.ParseCommand(message);
             if (!commandType.HasValue)
             {

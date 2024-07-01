@@ -4,6 +4,7 @@ using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Client;
+using Core.Whitelist;
 using SpotifyAPI.Web;
 using Telegram.Bot;
 using TelemetryApp.Api.Client.Log;
@@ -20,8 +21,9 @@ public class UnpauseCommand
         ISessionsService sessionsService,
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
+        IWhitelistService whitelistService,
         ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient)
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
     {
     }
 
@@ -41,6 +43,7 @@ public class UnpauseCommand
                 Uri = Session.Context.TrackUri,
             };
         }
+
         var result = await this.ApplyToAllParticipants(
             (client, participant) =>
             {

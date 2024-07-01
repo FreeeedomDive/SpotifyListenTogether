@@ -23,28 +23,46 @@ public class CommandsFactory : ICommandsFactory
     {
         commandBuilders = new Dictionary<CommandType, Func<CommandBase>>
         {
-            { CommandType.Start, () => new StartCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
-            { CommandType.Whitelist, () => new WhitelistCommand(whitelistService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
-            { CommandType.CreateSession, () => new CreateSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
-            { CommandType.LeaveSession, () => new LeaveSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
-            { CommandType.JoinSession, () => new JoinSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
-            { CommandType.ForceSync, () => new ForceSyncCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
-            { CommandType.Pause, () => new PauseCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
-            { CommandType.Unpause, () => new UnpauseCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
-            { CommandType.NextTrack, () => new NextTrackCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
+            { CommandType.Start, () => new StartCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
+            { CommandType.Whitelist, () => new WhitelistCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
+            {
+                CommandType.CreateSession,
+                () => new CreateSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+            },
+            {
+                CommandType.LeaveSession,
+                () => new LeaveSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+            },
+            {
+                CommandType.JoinSession,
+                () => new JoinSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+            },
+            { CommandType.ForceSync, () => new ForceSyncCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
+            { CommandType.Pause, () => new PauseCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
+            { CommandType.Unpause, () => new UnpauseCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
+            { CommandType.NextTrack, () => new NextTrackCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
             {
                 CommandType.GroupAddToQueue,
-                () => new GroupAddSongsToQueueCommand(spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient)
+                () => new GroupAddSongsToQueueCommand(
+                    spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient
+                )
             },
-            { CommandType.ForceAuth, () => new ForceAuthCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
-            { CommandType.SessionInfo, () => new SessionInfoCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient) },
+            { CommandType.ForceAuth, () => new ForceAuthCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
+            {
+                CommandType.SessionInfo,
+                () => new SessionInfoCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+            },
             {
                 CommandType.StatsByArtists,
-                () => new PlaylistStatsByArtistCommand(spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient)
+                () => new PlaylistStatsByArtistCommand(
+                    spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient
+                )
             },
             {
                 CommandType.PlayMusic,
-                () => new PlayMusicCommand(spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient)
+                () => new PlayMusicCommand(
+                    spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient
+                )
             },
         };
     }

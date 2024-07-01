@@ -4,6 +4,7 @@ using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Client;
+using Core.Whitelist;
 using SpotifyAPI.Web;
 using Telegram.Bot;
 using TelemetryApp.Api.Client.Log;
@@ -17,8 +18,9 @@ public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAll
         ISessionsService sessionsService,
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
+        IWhitelistService whitelistService,
         ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient)
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
     {
     }
 
@@ -43,6 +45,7 @@ public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAll
             {
                 return;
             }
+
             Session.Context = new SessionContext
             {
                 ContextUri = playback.Context.Uri,
@@ -50,7 +53,7 @@ public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAll
                 PositionMs = playback.ProgressMs,
             };
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             await LoggerClient.ErrorAsync(e, "Failed to save context");
         }

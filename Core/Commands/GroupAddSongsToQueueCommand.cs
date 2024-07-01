@@ -5,6 +5,7 @@ using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Spotify.Links;
+using Core.Whitelist;
 using SpotifyAPI.Web;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
@@ -24,8 +25,9 @@ public class GroupAddSongsToQueueCommand
         ISessionsService sessionsService,
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
+        IWhitelistService whitelistService,
         ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, loggerClient)
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
     {
         this.spotifyLinksRecognizeService = spotifyLinksRecognizeService;
     }
