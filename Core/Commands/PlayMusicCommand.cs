@@ -126,7 +126,7 @@ public class PlayMusicCommand
         var result = await this.ApplyToAllParticipants(
             async (client, participant) =>
             {
-                await client.Player.SetShuffle(new PlayerShuffleRequest(false));
+                // await client.Player.SetShuffle(new PlayerShuffleRequest(false)); // TODO: SpotifyApi returns unexpected response, but library expects boolean value
                 await client.Player.ResumePlayback(
                     new PlayerResumePlaybackRequest
                     {
@@ -153,7 +153,7 @@ public class PlayMusicCommand
         var result = await this.ApplyToAllParticipants(
             async (client, participant) =>
             {
-                await client.Player.SetShuffle(new PlayerShuffleRequest(false));
+                // await client.Player.SetShuffle(new PlayerShuffleRequest(false)); // TODO: SpotifyApi returns unexpected response, but library expects boolean value
                 await client.Player.ResumePlayback(
                     new PlayerResumePlaybackRequest
                     {
