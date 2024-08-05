@@ -1,3 +1,4 @@
+using Core.Extensions;
 using Core.Settings;
 using Core.Spotify.Auth;
 using Core.Spotify.Auth.Storage;
@@ -103,6 +104,7 @@ public class SpotifyClientFactory : ISpotifyClientFactory
     {
         var config = SpotifyClientConfig
                      .CreateDefault()
+                     .WithJSONSerializer(new JsonSerializerDecorator())
                      .WithAuthenticator(new AuthorizationCodeAuthenticator(spotifySettings.Value.ClientId, spotifySettings.Value.ClientSecret, token));
 
         return new SpotifyClient(config);
