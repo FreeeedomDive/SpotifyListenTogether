@@ -56,19 +56,16 @@ public class PlayMusicCommand
         switch (spotifyLink.Type)
         {
             case SpotifyLinkType.Track:
-                // TODO: остановлено до лучших времен, когда метод получения трека перестанет отдавать 403
-                // var track = await SpotifyClient.Tracks.Get(spotifyLink.Id);
-                await PlayTrackAsync(spotifyLink.Id);
+                var track = await SpotifyClient.Tracks.TryGet(spotifyLink.Id);
+                await PlayTrackAsync(spotifyLink.Id, track);
                 break;
             case SpotifyLinkType.Album:
-                // TODO: остановлено до лучших времен, когда метод получения альбома перестанет отдавать 403
-                // var album = await SpotifyClient.Albums.Get(spotifyLink.Id);
-                await PlayAlbumAsync(spotifyLink.Id);
+                var album = await SpotifyClient.Albums.TryGet(spotifyLink.Id);
+                await PlayAlbumAsync(spotifyLink.Id, album);
                 break;
             case SpotifyLinkType.Playlist:
-                // TODO: остановлено до лучших времен, когда метод получения плейлиста перестанет отдавать 403
-                // var playlist = await SpotifyClient.Playlists.Get(spotifyLink.Id);
-                await PlayPlaylistAsContextAsync(spotifyLink.Id);
+                var playlist = await SpotifyClient.Playlists.TryGet(spotifyLink.Id);
+                await PlayPlaylistAsContextAsync(spotifyLink.Id, playlist);
                 break;
             case SpotifyLinkType.Artist:
                 await SendResponseAsync(UserId, "Воспроизведение исполнителей не поддерживается, советуем найти плейлист с этим исполнителем и воспроизвести его.");
@@ -80,10 +77,11 @@ public class PlayMusicCommand
 
     private async Task PlayTrackAsync(string trackId, FullTrack? track = null)
     {
-        var trackLink = $"https://open.spotify.com/track/{trackId}";
+        var trackLink = track?.ExternalUrls["spotify"] ?? $"https://open.spotify.com/track/{trackId}";
+        var trackUri = track?.Uri ?? trackId.ToTrackUri();
         var shouldAddToQueue = await ShouldAddToQueueAsync();
         var result = shouldAddToQueue
-            ? await this.ApplyToAllParticipants((client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(trackId.ToTrackUri())), LoggerClient)
+            ? await this.ApplyToAllParticipants((client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(trackUri)), LoggerClient)
             : await this.ApplyToAllParticipants(
                 async (client, participant) =>
                 {
@@ -92,7 +90,7 @@ public class PlayMusicCommand
                         {
                             Uris = new List<string>
                             {
-                                trackId.ToTrackUri(),
+                                trackUri,
                             },
                             DeviceId = participant.DeviceId,
                         }
@@ -121,19 +119,12 @@ public class PlayMusicCommand
 
     private async Task PlayAlbumAsync(string albumId, FullAlbum? album = null)
     {
-        var albumLink = $"https://open.spotify.com/album/{albumId}";
-        var albumUri = $"spotify:album:{albumId}";
+        var albumLink = album?.ExternalUrls["spotify"] ?? $"https://open.spotify.com/album/{albumId}";
+        var albumUri = album?.Uri ?? $"spotify:album:{albumId}";
         var result = await this.ApplyToAllParticipants(
             async (client, participant) =>
             {
-                try
-                {
-                    await client.Player.SetShuffle(new PlayerShuffleRequest(false));
-                }
-                catch
-                {
-                    // SpotifyApi returns unexpected response, but library expects boolean value
-                }
+                await client.Player.SetShuffle(new PlayerShuffleRequest(false));
                 await client.Player.ResumePlayback(
                     new PlayerResumePlaybackRequest
                     {
@@ -155,23 +146,16 @@ public class PlayMusicCommand
 
     private async Task PlayPlaylistAsContextAsync(string playlistId, FullPlaylist? playlist = null)
     {
-        var playlistLink = $"https://open.spotify.com/playlist/{playlistId}";
-        var playlistUri = $"spotify:playlist:{playlistId}";
+        var playlistLink = playlist?.ExternalUrls?["spotify"] ?? $"https://open.spotify.com/playlist/{playlistId}";
+        var playlistUri = playlist?.Uri ?? $"spotify:playlist:{playlistId}";
         var result = await this.ApplyToAllParticipants(
             async (client, participant) =>
             {
-                try
-                {
-                    await client.Player.SetShuffle(new PlayerShuffleRequest(false));
-                }
-                catch
-                {
-                    // SpotifyApi returns unexpected response, but library expects boolean value
-                }
+                await client.Player.SetShuffle(new PlayerShuffleRequest(false));
                 await client.Player.ResumePlayback(
                     new PlayerResumePlaybackRequest
                     {
-                        ContextUri = playlist?.Uri ?? playlistUri,
+                        ContextUri = playlistUri,
                         DeviceId = participant.DeviceId,
                     }
                 );
