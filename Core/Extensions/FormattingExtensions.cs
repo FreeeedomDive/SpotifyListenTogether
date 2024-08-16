@@ -29,6 +29,9 @@ public static class FormattingExtensions
         return $"[{context.Type.Escape()}]({context.ExternalUrls["spotify"]})";
     }
 
+    /// <summary>
+    ///     Escape reserved characters in Telegram MarkdownV2 format
+    /// </summary>
     public static string Escape(this string str)
     {
         return str.Replace("-", "\\-")
@@ -37,6 +40,8 @@ public static class FormattingExtensions
                   .Replace(".", "\\.")
                   .Replace("+", "\\+")
                   .Replace("!", "\\!")
-                  .Replace("=", "\\=");
+                  .Replace("=", "\\=")
+                  .Replace("<", "\\<")
+                  .Replace(">", "\\>");
     }
 }
