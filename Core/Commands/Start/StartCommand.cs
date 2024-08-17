@@ -5,9 +5,9 @@ using Core.Whitelist;
 using Telegram.Bot;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.Start;
 
-public class StartCommand : CommandBase
+public class StartCommand : CommandBase, IStartCommand
 {
     public StartCommand(
         ITelegramBotClient telegramBotClient,

@@ -1,18 +1,16 @@
 using Core.Commands.Base;
 using Core.Commands.Base.Interfaces;
 using Core.Sessions;
-using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Whitelist;
 using Telegram.Bot;
-using Telegram.Bot.Types.Enums;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.ForceAuth;
 
-public class CreateSessionCommand : CommandBase, ICommandWithoutSession, IInitiateSpotifyAuthCommand
+public class ForceAuthCommand : CommandBase, IInitiateSpotifyAuthCommand, IForceAuthCommand
 {
-    public CreateSessionCommand(
+    public ForceAuthCommand(
         ITelegramBotClient telegramBotClient,
         ISessionsService sessionsService,
         ISpotifyClientStorage spotifyClientStorage,
@@ -23,15 +21,8 @@ public class CreateSessionCommand : CommandBase, ICommandWithoutSession, IInitia
     {
     }
 
-    protected override async Task ExecuteAsync()
+    protected override Task ExecuteAsync()
     {
-        var newSessionId = await SessionsService.CreateAsync(
-            new SessionParticipant
-            {
-                UserId = UserId,
-                UserName = UserName,
-            }
-        );
-        await SendResponseAsync(UserId, $"Создана комната `{newSessionId}`", ParseMode.MarkdownV2);
+        return Task.CompletedTask;
     }
 }

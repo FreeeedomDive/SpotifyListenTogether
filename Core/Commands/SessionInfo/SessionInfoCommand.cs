@@ -11,9 +11,9 @@ using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.SessionInfo;
 
-public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAllParticipants
+public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAllParticipants, ISessionInfoCommand
 {
     public SessionInfoCommand(
         ITelegramBotClient telegramBotClient,

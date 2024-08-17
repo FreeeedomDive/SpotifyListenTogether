@@ -5,5 +5,5 @@ namespace Core.Commands.Factory;
 
 public interface ICommandsFactory
 {
-    CommandBase Build(CommandType commandType);
+    ICommandBase Build(CommandType commandType);
 }

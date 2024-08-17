@@ -11,13 +11,14 @@ using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.PlayMusic;
 
 public class PlayMusicCommand
     : CommandBase,
       ICommandWithSpotifyAuth,
       ICommandCanSaveSpotifyDeviceId,
-      ICommandWithAliveDeviceValidation
+      ICommandWithAliveDeviceValidation,
+      IPlayMusicCommand
 {
     public PlayMusicCommand(
         ISpotifyLinksRecognizeService spotifyLinksRecognizeService,

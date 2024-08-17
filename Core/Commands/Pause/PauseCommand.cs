@@ -9,9 +9,9 @@ using SpotifyAPI.Web;
 using Telegram.Bot;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.Pause;
 
-public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAllParticipants, ICommandCanSaveSpotifyDeviceId
+public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAllParticipants, ICommandCanSaveSpotifyDeviceId, IPauseCommand
 {
     public PauseCommand(
         ITelegramBotClient telegramBotClient,

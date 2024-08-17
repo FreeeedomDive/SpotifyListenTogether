@@ -9,9 +9,9 @@ using SpotifyAPI.Web;
 using Telegram.Bot;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.NextTrack;
 
-public class NextTrackCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAllParticipants
+public class NextTrackCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAllParticipants, INextTrackCommand
 {
     public NextTrackCommand(
         ITelegramBotClient telegramBotClient,
