@@ -1,73 +1,61 @@
 using Core.Commands.Base;
+using Core.Commands.CreateSession;
+using Core.Commands.ForceAuth;
+using Core.Commands.ForceSync;
+using Core.Commands.GroupAddToQueue;
+using Core.Commands.JoinSession;
+using Core.Commands.LeaveSession;
+using Core.Commands.NextTrack;
+using Core.Commands.Pause;
+using Core.Commands.PlayMusic;
 using Core.Commands.Recognize;
-using Core.Sessions;
-using Core.Spotify.Client;
-using Core.Spotify.Links;
-using Core.Whitelist;
-using Telegram.Bot;
-using TelemetryApp.Api.Client.Log;
+using Core.Commands.SessionInfo;
+using Core.Commands.Start;
+using Core.Commands.StatsByArtists;
+using Core.Commands.Unpause;
+using Core.Commands.Whitelist;
 
 namespace Core.Commands.Factory;
 
 public class CommandsFactory : ICommandsFactory
 {
     public CommandsFactory(
-        ITelegramBotClient telegramBotClient,
-        ISessionsService sessionsService,
-        ISpotifyClientFactory spotifyClientFactory,
-        ISpotifyClientStorage spotifyClientStorage,
-        ISpotifyLinksRecognizeService spotifyLinksRecognizeService,
-        IWhitelistService whitelistService,
-        ILoggerClient loggerClient
+        IStartCommand startCommand,
+        IWhitelistCommand whitelistCommand,
+        ICreateSessionCommand createSessionCommand,
+        ILeaveSessionCommand leaveSessionCommand,
+        IJoinSessionCommand joinSessionCommand,
+        IForceSyncCommand forceSyncCommand,
+        IPauseCommand pauseCommand,
+        IUnpauseCommand unpauseCommand,
+        INextTrackCommand nextTrackCommand,
+        IGroupAddSongsToQueueCommand groupAddSongsToQueueCommand,
+        IForceAuthCommand forceAuthCommand,
+        ISessionInfoCommand sessionInfoCommand,
+        IPlaylistStatsByArtistCommand playlistStatsByArtistCommand,
+        IPlayMusicCommand playMusicCommand
     )
     {
-        commandBuilders = new Dictionary<CommandType, Func<CommandBase>>
+        commandBuilders = new Dictionary<CommandType, Func<ICommandBase>>
         {
-            { CommandType.Start, () => new StartCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
-            { CommandType.Whitelist, () => new WhitelistCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
-            {
-                CommandType.CreateSession,
-                () => new CreateSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
-            },
-            {
-                CommandType.LeaveSession,
-                () => new LeaveSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
-            },
-            {
-                CommandType.JoinSession,
-                () => new JoinSessionCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
-            },
-            { CommandType.ForceSync, () => new ForceSyncCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
-            { CommandType.Pause, () => new PauseCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
-            { CommandType.Unpause, () => new UnpauseCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
-            { CommandType.NextTrack, () => new NextTrackCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
-            {
-                CommandType.GroupAddToQueue,
-                () => new GroupAddSongsToQueueCommand(
-                    spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient
-                )
-            },
-            { CommandType.ForceAuth, () => new ForceAuthCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient) },
-            {
-                CommandType.SessionInfo,
-                () => new SessionInfoCommand(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
-            },
-            {
-                CommandType.StatsByArtists,
-                () => new PlaylistStatsByArtistCommand(
-                    spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient
-                )
-            },
-            {
-                CommandType.PlayMusic,
-                () => new PlayMusicCommand(
-                    spotifyLinksRecognizeService, telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient
-                )
-            },
+            { CommandType.Start, () => startCommand },
+            { CommandType.Whitelist, () => whitelistCommand },
+            { CommandType.CreateSession, () => createSessionCommand },
+            { CommandType.LeaveSession, () => leaveSessionCommand },
+            { CommandType.JoinSession, () => joinSessionCommand },
+            { CommandType.ForceSync, () => forceSyncCommand },
+            { CommandType.Pause, () => pauseCommand },
+            { CommandType.Unpause, () => unpauseCommand },
+            { CommandType.NextTrack, () => nextTrackCommand },
+            { CommandType.GroupAddToQueue, () => groupAddSongsToQueueCommand },
+            { CommandType.ForceAuth, () => forceAuthCommand },
+            { CommandType.SessionInfo, () => sessionInfoCommand },
+            { CommandType.StatsByArtists, () => playlistStatsByArtistCommand },
+            { CommandType.PlayMusic, () => playMusicCommand },
         };
     }
 
-    public CommandBase Build(CommandType commandType)
+    public ICommandBase Build(CommandType commandType)
     {
         if (!commandBuilders.TryGetValue(commandType, out var commandBuilder))
         {
@@ -77,5 +65,5 @@ public class CommandsFactory : ICommandsFactory
         return commandBuilder();
     }
 
-    private readonly Dictionary<CommandType, Func<CommandBase>> commandBuilders;
+    private readonly Dictionary<CommandType, Func<ICommandBase>> commandBuilders;
 }

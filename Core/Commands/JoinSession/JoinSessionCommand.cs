@@ -9,9 +9,9 @@ using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.JoinSession;
 
-public class JoinSessionCommand : CommandBase, ICommandWithoutSession, IInitiateSpotifyAuthCommand
+public class JoinSessionCommand : CommandBase, ICommandWithoutSession, IInitiateSpotifyAuthCommand, IJoinSessionCommand
 {
     public JoinSessionCommand(
         ITelegramBotClient telegramBotClient,

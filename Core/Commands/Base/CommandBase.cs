@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using Core.Commands.Base.Interfaces;
+using Core.Commands.ForceAuth;
+using Core.Commands.Whitelist;
 using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
@@ -12,7 +14,7 @@ using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.Base;
 
-public abstract class CommandBase
+public abstract class CommandBase : ICommandBase
 {
     protected CommandBase(
         ITelegramBotClient telegramBotClient,
@@ -139,7 +141,7 @@ public abstract class CommandBase
     {
         try
         {
-            var forceReAuth = this is ForceAuthCommand;
+            var forceReAuth = this is IForceAuthCommand;
             var spotifyClient = await SpotifyClientFactory.CreateOrGetAsync(UserId, forceReAuth);
             if (spotifyClient is null)
             {

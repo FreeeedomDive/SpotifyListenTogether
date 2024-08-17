@@ -9,9 +9,9 @@ using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.LeaveSession;
 
-public class LeaveSessionCommand : CommandBase, ICommandWithSession
+public class LeaveSessionCommand : CommandBase, ICommandWithSession, ILeaveSessionCommand
 {
     public LeaveSessionCommand(
         ITelegramBotClient telegramBotClient,

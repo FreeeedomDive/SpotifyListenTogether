@@ -11,13 +11,14 @@ using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.GroupAddToQueue;
 
 public class GroupAddSongsToQueueCommand
     : CommandBase,
       ICommandWithSpotifyAuth,
       ICommandCanSaveSpotifyDeviceId,
-      ICommandWithAliveDeviceValidation
+      ICommandWithAliveDeviceValidation,
+      IGroupAddSongsToQueueCommand
 {
     public GroupAddSongsToQueueCommand(
         ISpotifyLinksRecognizeService spotifyLinksRecognizeService,

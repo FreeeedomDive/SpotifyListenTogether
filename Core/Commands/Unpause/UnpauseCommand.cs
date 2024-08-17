@@ -9,12 +9,9 @@ using SpotifyAPI.Web;
 using Telegram.Bot;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.Unpause;
 
-public class UnpauseCommand
-    : CommandBase,
-      ICommandWithSpotifyAuth,
-      ICommandWithAliveDeviceValidation
+public class UnpauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandWithAliveDeviceValidation, IUnpauseCommand
 {
     public UnpauseCommand(
         ITelegramBotClient telegramBotClient,

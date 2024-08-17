@@ -8,9 +8,9 @@ using SpotifyAPI.Web;
 using Telegram.Bot;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.StatsByArtists;
 
-public class PlaylistStatsByArtistCommand : CommandBase, ICommandWithSpotifyAuth
+public class PlaylistStatsByArtistCommand : CommandBase, ICommandWithSpotifyAuth, IPlaylistStatsByArtistCommand
 {
     public PlaylistStatsByArtistCommand(
         ISpotifyLinksRecognizeService spotifyLinksRecognizeService,

@@ -1,3 +1,5 @@
+using System.Reflection;
+using Core.Commands.Base;
 using Core.Commands.Factory;
 using Core.Commands.Recognize;
 using Core.Database;
@@ -33,8 +35,17 @@ builder.Services.AddTransient<ISpotifyLinksRecognizeService, SpotifyLinksRecogni
 builder.Services.AddSingleton<ISessionsService, SessionsService>();
 builder.Services.AddSingleton<ISpotifyClientStorage, SpotifyClientStorage>();
 builder.Services.AddTransient<ISpotifyClientFactory, SpotifyClientFactory>();
+
 builder.Services.AddTransient<ICommandsRecognizer, CommandsRecognizer>();
+var allTypes = typeof(ICommandBase).Assembly.GetTypes().ToArray();
+var commandTypes = allTypes.Where(t => typeof(ICommandBase).IsAssignableFrom(t) && t.IsInterface && t != typeof(ICommandBase)).ToArray();
+foreach (var commandInterfaceType in commandTypes)
+{
+    var commandImplementationType = allTypes.First(t => commandInterfaceType.IsAssignableFrom(t) && !t.IsInterface);
+    builder.Services.AddTransient(commandInterfaceType, commandImplementationType);
+}
 builder.Services.AddTransient<ICommandsFactory, CommandsFactory>();
+
 builder.Services.AddTransient<IWhitelistService, WhitelistService>();
 builder.Services.AddTransient<ITelegramBotWorker, TelegramBotWorker>();
 

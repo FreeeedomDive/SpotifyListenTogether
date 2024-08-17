@@ -9,9 +9,9 @@ using SpotifyAPI.Web;
 using Telegram.Bot;
 using TelemetryApp.Api.Client.Log;
 
-namespace Core.Commands;
+namespace Core.Commands.ForceSync;
 
-public class ForceSyncCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAllParticipants
+public class ForceSyncCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAllParticipants, IForceSyncCommand
 {
     public ForceSyncCommand(
         ITelegramBotClient telegramBotClient,
