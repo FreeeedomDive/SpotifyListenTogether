@@ -23,29 +23,29 @@ jobs:
 
     - name: Log in to Docker Registry
       env:
-        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+        DOCKER_REGISTRY_DOMAIN: ${{ secrets.DOCKER_REGISTRY_DOMAIN }}
         DOCKER_USERNAME: ${{ secrets.DOCKER_REGISTRY_LOGIN }}
         DOCKER_PASSWORD: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
       run: |
-        echo "$DOCKER_PASSWORD" | docker login $DOCKER_REGISTRY_IP -u "$DOCKER_USERNAME" --password-stdin
+        echo "$DOCKER_PASSWORD" | docker login $DOCKER_REGISTRY_DOMAIN -u "$DOCKER_USERNAME" --password-stdin
 
     - name: Build Docker Image
       env:
-        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+        DOCKER_REGISTRY_DOMAIN: ${{ secrets.DOCKER_REGISTRY_DOMAIN }}
       run: |
-        docker build . -f Dockerfile -t $DOCKER_REGISTRY_IP/spotifylistentogetherbot:${GITHUB_SHA}
+        docker build . -f Dockerfile -t $DOCKER_REGISTRY_DOMAIN/spotifylistentogetherbot:${GITHUB_SHA}
 
     - name: Push Docker Image to Registry
       env:
-        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+        DOCKER_REGISTRY_DOMAIN: ${{ secrets.DOCKER_REGISTRY_DOMAIN }}
       run: |
-        docker push $DOCKER_REGISTRY_IP/spotifylistentogetherbot:${GITHUB_SHA}
+        docker push $DOCKER_REGISTRY_DOMAIN/spotifylistentogetherbot:${GITHUB_SHA}
 
     - name: Replace Placeholders in Kubernetes YAML
       env:
-        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+        DOCKER_REGISTRY_DOMAIN: ${{ secrets.DOCKER_REGISTRY_DOMAIN }}
       run: |
-        sed -i "s/{{docker_registry_domain}}/$DOCKER_REGISTRY_IP/g" k8s_prod/slt-bot-deployment.yaml
+        sed -i "s/{{docker_registry_domain}}/$DOCKER_REGISTRY_DOMAIN/g" k8s_prod/slt-bot-deployment.yaml
         sed -i "s/{{docker_image_version}}/${GITHUB_SHA}/g" k8s_prod/slt-bot-deployment.yaml
 
     - name: Set Up kubeconfig
