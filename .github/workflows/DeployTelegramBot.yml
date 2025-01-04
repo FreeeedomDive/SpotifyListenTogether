@@ -21,6 +21,14 @@ jobs:
       run: |
         echo "$APPSETTINGS_PRODUCTION_JSON" > ./TelegramBot/appsettings.Production.json
 
+    - name: Configure Docker for Insecure Registry
+      env:
+        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+      run: |
+        sudo mkdir -p /etc/docker
+        echo '{"insecure-registries": ["'$DOCKER_REGISTRY_IP'"]}' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker
+
     - name: Log in to Docker Registry
       env:
         DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
