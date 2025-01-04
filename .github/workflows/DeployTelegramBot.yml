@@ -62,5 +62,4 @@ jobs:
       run: |
         echo "$KUBECONFIG_CONTENT" > ./kubeconfig.yaml
         export KUBECONFIG=./kubeconfig.yaml
-        kubectl config current-context
         kubectl apply -f k8s_prod/slt-bot-deployment.yaml
