@@ -5,8 +5,6 @@ on:
     inputs:
       project:
         description: 'Deploy TelegramBot'
-        required: true
-        default: 'example-project'
 
 jobs:
   deploy:
