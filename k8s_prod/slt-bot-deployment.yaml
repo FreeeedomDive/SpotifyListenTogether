@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: spotifylistentogetherbot
-          image: localhost:5000/spotifylistentogetherbot:{{TAG_NUMBER}}
+          image: {{docker_registry_domain}}/spotifylistentogetherbot:{{docker_image_version}}
           env:
             - name: ASPNETCORE_ENVIRONMENT
               value: Production
