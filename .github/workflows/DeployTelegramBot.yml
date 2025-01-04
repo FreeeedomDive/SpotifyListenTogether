@@ -56,14 +56,11 @@ jobs:
         sed -i "s/{{docker_registry_domain}}/$DOCKER_REGISTRY_DOMAIN/g" k8s_prod/slt-bot-deployment.yaml
         sed -i "s/{{docker_image_version}}/${GITHUB_SHA}/g" k8s_prod/slt-bot-deployment.yaml
 
-    - name: Set Up kubeconfig
+    - name: k8s
       env:
         KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
       run: |
-        echo "$KUBECONFIG_CONTENT" > ~/kubeconfig.yaml
-        export KUBECONFIG=~/kubeconfig.yaml
-
-    - name: Apply Kubernetes Configuration
-      run: |
+        echo "$KUBECONFIG_CONTENT" > $HOME/.kube/config
+        export KUBECONFIG=$HOME/.kube/config
         kubectl config current-context
         kubectl apply -f k8s_prod/slt-bot-deployment.yaml
