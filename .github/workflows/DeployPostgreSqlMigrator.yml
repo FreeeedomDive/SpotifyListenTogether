@@ -63,3 +63,4 @@ jobs:
         echo "$KUBECONFIG_CONTENT" > ./kubeconfig.yaml
         export KUBECONFIG=./kubeconfig.yaml
         kubectl apply -f k8s_prod/slt-postgresql-job.yaml
+        kubectl wait --for=condition=complete job/spotify-listen-together-postgresql-job
