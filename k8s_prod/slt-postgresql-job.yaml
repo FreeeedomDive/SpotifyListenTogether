@@ -7,7 +7,7 @@ spec:
     spec:
       containers:
         - name: spotifylistentogetherpostgresql
-          image: localhost:5000/spotifylistentogetherpostgresql:{{TAG_NUMBER}}
+          image: {{docker_registry_domain}}/spotifylistentogetherpostgresql:{{docker_image_version}}
           env:
             - name: ASPNETCORE_ENVIRONMENT
               value: Production

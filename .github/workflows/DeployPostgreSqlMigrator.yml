@@ -1,0 +1,65 @@
+name: Apply PostgreSql migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: 'Apply PostgreSql migrations'
+
+jobs:
+  deploy:
+    name: Apply PostgreSql migrations
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Recreate appsettings.Production.json
+      env:
+        APPSETTINGS_PRODUCTION_JSON: ${{ secrets.POSTGRESQLMIGRATOR_APPSETTINGS }}
+      run: |
+        echo "$APPSETTINGS_PRODUCTION_JSON" > ./PostgreSqlMigrationsApplier/appsettings.Production.json
+
+    - name: Configure Docker for Insecure Registry
+      env:
+        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+      run: |
+        sudo mkdir -p /etc/docker
+        echo '{"insecure-registries": ["'$DOCKER_REGISTRY_IP'"]}' | sudo tee /etc/docker/daemon.json
+        sudo systemctl restart docker
+
+    - name: Log in to Docker Registry
+      env:
+        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_REGISTRY_LOGIN }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      run: |
+        echo "$DOCKER_PASSWORD" | docker login $DOCKER_REGISTRY_IP -u "$DOCKER_USERNAME" --password-stdin
+
+    - name: Build Docker Image
+      env:
+        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+      run: |
+        docker build . -f PostgreSqlMigrationsApplier.Dockerfile -t $DOCKER_REGISTRY_IP/spotifylistentogetherpostgresql:${GITHUB_SHA}
+
+    - name: Push Docker Image to Registry
+      env:
+        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+      run: |
+        docker push $DOCKER_REGISTRY_IP/spotifylistentogetherpostgresql:${GITHUB_SHA}
+
+    - name: Replace Placeholders in Kubernetes YAML
+      env:
+        DOCKER_REGISTRY_DOMAIN: ${{ secrets.DOCKER_REGISTRY_DOMAIN }}
+      run: |
+        sed -i "s/{{docker_registry_domain}}/$DOCKER_REGISTRY_DOMAIN/g" k8s_prod/slt-postgresql-job.yaml
+        sed -i "s/{{docker_image_version}}/${GITHUB_SHA}/g" k8s_prod/slt-postgresql-job.yaml
+
+    - name: k8s
+      env:
+        KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
+      run: |
+        echo "$KUBECONFIG_CONTENT" > ./kubeconfig.yaml
+        export KUBECONFIG=./kubeconfig.yaml
+        kubectl apply -f k8s_prod/slt-postgresql-job.yaml
