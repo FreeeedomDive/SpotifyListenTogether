@@ -65,4 +65,4 @@ jobs:
 
     - name: Apply Kubernetes Configuration
       run: |
-        kubectl apply -f k8s_prod/slt-bot-deployment.yaml
+        kubectl apply -f k8s_prod/slt-bot-deployment.yaml --validate=false
