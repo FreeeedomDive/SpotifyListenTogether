@@ -60,7 +60,7 @@ jobs:
       env:
         KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
       run: |
-        echo "$KUBECONFIG_CONTENT" > $HOME/.kube/config
-        export KUBECONFIG=$HOME/.kube/config
+        echo "$KUBECONFIG_CONTENT" > ./kubeconfig.yaml
+        export KUBECONFIG=./kubeconfig.yaml
         kubectl config current-context
         kubectl apply -f k8s_prod/slt-bot-deployment.yaml
