@@ -60,8 +60,8 @@ jobs:
       env:
         KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
       run: |
-        echo "$KUBECONFIG_CONTENT" > kubeconfig
-        export KUBECONFIG=$PWD/kubeconfig
+        echo "$KUBECONFIG_CONTENT" > ~/kubeconfig.yaml
+        export KUBECONFIG=~/kubeconfig.yaml
 
     - name: Apply Kubernetes Configuration
       run: |
