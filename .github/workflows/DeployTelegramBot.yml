@@ -1,0 +1,62 @@
+name: Deploy TelegramBot
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: 'Deploy TelegramBot'
+        required: true
+        default: 'example-project'
+
+jobs:
+  deploy:
+    name: Deploy TelegramBot
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Recreate appsettings.Production.json
+      env:
+        APPSETTINGS_PRODUCTION_JSON: ${{ secrets.TELEGRAMBOT_APPSETTINGS }}
+      run: |
+        echo "$APPSETTINGS_PRODUCTION_JSON" > ./TelegramBot/appsettings.Production.json
+
+    - name: Log in to Docker Registry
+      env:
+        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_REGISTRY_LOGIN }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
+      run: |
+        echo "$DOCKER_PASSWORD" | docker login $DOCKER_REGISTRY_IP -u "$DOCKER_USERNAME" --password-stdin
+
+    - name: Build Docker Image
+      env:
+        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+      run: |
+        docker build . -f Dockerfile -t $DOCKER_REGISTRY_IP/spotifylistentogetherbot:${GITHUB_SHA}
+
+    - name: Push Docker Image to Registry
+      env:
+        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+      run: |
+        docker push $DOCKER_REGISTRY_IP/spotifylistentogetherbot:${GITHUB_SHA}
+
+    - name: Replace Placeholders in Kubernetes YAML
+      env:
+        DOCKER_REGISTRY_IP: ${{ secrets.DOCKER_REGISTRY_IP }}
+      run: |
+        sed -i "s/{{docker_registry_domain}}/$DOCKER_REGISTRY_IP/g" k8s_prod/slt-bot-deployment.yaml
+        sed -i "s/{{docker_image_version}}/${GITHUB_SHA}/g" k8s_prod/slt-bot-deployment.yaml
+
+    - name: Set Up kubeconfig
+      env:
+        KUBECONFIG_CONTENT: ${{ secrets.KUBECONFIG }}
+      run: |
+        echo "$KUBECONFIG_CONTENT" > kubeconfig
+        export KUBECONFIG=$PWD/kubeconfig
+
+    - name: Apply Kubernetes Configuration
+      run: |
+        kubectl apply -f k8s_prod/slt-bot-deployment.yaml
