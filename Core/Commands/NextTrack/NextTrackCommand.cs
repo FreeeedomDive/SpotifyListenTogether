@@ -5,9 +5,9 @@ using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web;
 using Telegram.Bot;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.NextTrack;
 
@@ -19,8 +19,8 @@ public class NextTrackCommand : CommandBase, ICommandWithSpotifyAuth, ICommandFo
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+        ILogger<NextTrackCommand> logger
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
     {
     }
 
@@ -30,7 +30,7 @@ public class NextTrackCommand : CommandBase, ICommandWithSpotifyAuth, ICommandFo
 
     protected override async Task ExecuteAsync()
     {
-        var result = await this.ApplyToAllParticipants((client, _) => client.Player.SkipNext(), LoggerClient);
+        var result = await this.ApplyToAllParticipants((client, _) => client.Player.SkipNext(), Logger);
         await NotifyAllAsync(Session, $"{UserName} переключает воспроизведение на следующий трек в очереди\n{result.ToFormattedString()}");
     }
 }

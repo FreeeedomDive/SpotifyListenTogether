@@ -4,9 +4,9 @@ using Core.Sessions;
 using Core.Spotify.Client;
 using Core.Spotify.Links;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web;
 using Telegram.Bot;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.StatsByArtists;
 
@@ -19,8 +19,8 @@ public class PlaylistStatsByArtistCommand : CommandBase, ICommandWithSpotifyAuth
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+        ILogger<PlaylistStatsByArtistCommand> logger
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
     {
         this.spotifyLinksRecognizeService = spotifyLinksRecognizeService;
     }

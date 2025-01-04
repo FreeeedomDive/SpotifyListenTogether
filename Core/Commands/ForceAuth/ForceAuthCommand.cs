@@ -3,8 +3,8 @@ using Core.Commands.Base.Interfaces;
 using Core.Sessions;
 using Core.Spotify.Client;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.ForceAuth;
 
@@ -16,8 +16,8 @@ public class ForceAuthCommand : CommandBase, IInitiateSpotifyAuthCommand, IForce
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+        ILogger<ForceAuthCommand> logger
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
     {
     }
 

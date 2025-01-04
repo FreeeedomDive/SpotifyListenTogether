@@ -1,7 +1,7 @@
 using Core.Commands.Base.Interfaces;
 using Core.Sessions.Models;
+using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Extensions;
 
@@ -10,7 +10,7 @@ public static class CommandsExtensions
     public static async Task<(SessionParticipant Participant, bool Result)[]> ApplyToAllParticipants(
         this ICommandForAllParticipants command,
         Func<ISpotifyClient, SessionParticipant, Task> action,
-        ILoggerClient loggerClient
+        ILogger logger
     )
     {
         var clients = command.UserIdToSpotifyClient;
@@ -25,7 +25,7 @@ public static class CommandsExtensions
                     }
                     catch (Exception e)
                     {
-                        await loggerClient.ErrorAsync(e, "Error in spotify action for user {username}", x.Participant.UserName);
+                        logger.LogError(e, "Error in spotify action for user {username}", x.Participant.UserName);
                         return (x.Participant, false);
                     }
                 }

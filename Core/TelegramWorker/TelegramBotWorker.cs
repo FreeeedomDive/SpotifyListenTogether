@@ -1,11 +1,10 @@
 using Core.Commands.Factory;
 using Core.Commands.Recognize;
-using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.TelegramWorker;
 
@@ -13,17 +12,15 @@ public class TelegramBotWorker : ITelegramBotWorker
 {
     public TelegramBotWorker(
         ITelegramBotClient telegramBotClient,
-        ILoggerClient loggerClient,
+        ILogger<TelegramBotWorker> logger,
         ICommandsRecognizer commandsRecognizer,
-        ICommandsFactory commandsFactory,
-        IWhitelistService whitelistService
+        ICommandsFactory commandsFactory
     )
     {
         this.telegramBotClient = telegramBotClient;
-        this.loggerClient = loggerClient;
+        this.logger = logger;
         this.commandsRecognizer = commandsRecognizer;
         this.commandsFactory = commandsFactory;
-        this.whitelistService = whitelistService;
     }
 
     public async Task StartAsync()
@@ -42,9 +39,10 @@ public class TelegramBotWorker : ITelegramBotWorker
         await Task.Delay(-1);
     }
 
-    private async Task HandlePollingErrorAsync(ITelegramBotClient client, Exception exception, CancellationToken cancellationToken)
+    private Task HandlePollingErrorAsync(ITelegramBotClient client, Exception exception, CancellationToken cancellationToken)
     {
-        await loggerClient.ErrorAsync(exception, "Telegram polling error");
+        logger.LogError(exception, "Telegram polling error");
+        return Task.CompletedTask;
     }
 
     private async Task HandleUpdateAsync(ITelegramBotClient client, Update update, CancellationToken cancellationToken)
@@ -75,7 +73,6 @@ public class TelegramBotWorker : ITelegramBotWorker
 
     private readonly ICommandsFactory commandsFactory;
     private readonly ICommandsRecognizer commandsRecognizer;
-    private readonly ILoggerClient loggerClient;
+    private readonly ILogger<TelegramBotWorker> logger;
     private readonly ITelegramBotClient telegramBotClient;
-    private readonly IWhitelistService whitelistService;
 }

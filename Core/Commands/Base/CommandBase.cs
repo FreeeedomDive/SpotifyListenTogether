@@ -7,10 +7,10 @@ using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.Base;
 
@@ -22,7 +22,7 @@ public abstract class CommandBase : ICommandBase
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
+        ILogger logger
     )
     {
         this.whitelistService = whitelistService;
@@ -30,7 +30,7 @@ public abstract class CommandBase : ICommandBase
         SessionsService = sessionsService;
         SpotifyClientStorage = spotifyClientStorage;
         SpotifyClientFactory = spotifyClientFactory;
-        LoggerClient = loggerClient;
+        Logger = logger;
     }
 
     public async Task ExecuteAsync(Message message)
@@ -108,7 +108,7 @@ public abstract class CommandBase : ICommandBase
                         {
                             participant.DeviceId = null;
                         }
-                    }, LoggerClient
+                    }, Logger
                 );
             }
 
@@ -128,12 +128,12 @@ public abstract class CommandBase : ICommandBase
         }
         catch (Exception exception)
         {
-            await LoggerClient.ErrorAsync(exception, "Unexpected error in command {CommandName}", CommandName);
+            Logger.LogError(exception, "Unexpected error in command {CommandName}", CommandName);
             await SendResponseAsync(UserId, $"Unexpected error in command {CommandName}");
         }
         finally
         {
-            await LoggerClient.InfoAsync("{UserName} used command {CommandName}, elapsed {Milliseconds}ms", UserName, CommandName, stopwatch.ElapsedMilliseconds);
+            Logger.LogInformation("{UserName} used command {CommandName}, elapsed {Milliseconds}ms", UserName, CommandName, stopwatch.ElapsedMilliseconds);
         }
     }
 
@@ -154,7 +154,7 @@ public abstract class CommandBase : ICommandBase
         }
         catch (Exception exception)
         {
-            await LoggerClient.ErrorAsync(exception, "Exception in auth");
+            Logger.LogError(exception, "Exception in auth");
         }
     }
 
@@ -189,6 +189,6 @@ public abstract class CommandBase : ICommandBase
     protected ISessionsService SessionsService { get; }
     private ISpotifyClientStorage SpotifyClientStorage { get; }
     private ISpotifyClientFactory SpotifyClientFactory { get; }
-    protected ILoggerClient LoggerClient { get; }
+    protected ILogger Logger { get; }
     private readonly IWhitelistService whitelistService;
 }

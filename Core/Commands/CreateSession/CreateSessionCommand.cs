@@ -4,9 +4,9 @@ using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.CreateSession;
 
@@ -18,8 +18,8 @@ public class CreateSessionCommand : CommandBase, ICreateSessionCommand, ICommand
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+        ILogger<CreateSessionCommand> logger
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
     {
     }
 

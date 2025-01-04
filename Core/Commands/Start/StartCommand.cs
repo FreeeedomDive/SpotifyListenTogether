@@ -2,8 +2,8 @@ using Core.Commands.Base;
 using Core.Sessions;
 using Core.Spotify.Client;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.Start;
 
@@ -15,8 +15,8 @@ public class StartCommand : CommandBase, IStartCommand
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+        ILogger<StartCommand> logger
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
     {
     }
 

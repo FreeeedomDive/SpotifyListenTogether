@@ -2,6 +2,7 @@ using Core.Commands.Base;
 using Core.Sessions;
 using Core.Spotify.Client;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using TelemetryApp.Api.Client.Log;
 
@@ -15,8 +16,8 @@ public class WhitelistCommand : CommandBase, IWhitelistCommand
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+        ILogger<WhitelistCommand> logger
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
     {
         this.whitelistService = whitelistService;
     }

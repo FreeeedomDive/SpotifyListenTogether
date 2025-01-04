@@ -6,10 +6,10 @@ using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Spotify.Links;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.GroupAddToQueue;
 
@@ -27,8 +27,8 @@ public class GroupAddSongsToQueueCommand
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+        ILogger<GroupAddSongsToQueueCommand> logger
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
     {
         this.spotifyLinksRecognizeService = spotifyLinksRecognizeService;
     }
@@ -56,7 +56,7 @@ public class GroupAddSongsToQueueCommand
                         }
                     );
                 }
-            }, LoggerClient
+            }, Logger
         );
 
         await NotifyAllAsync(

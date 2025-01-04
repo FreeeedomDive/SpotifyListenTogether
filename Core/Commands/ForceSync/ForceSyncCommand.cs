@@ -5,9 +5,9 @@ using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web;
 using Telegram.Bot;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.ForceSync;
 
@@ -19,8 +19,8 @@ public class ForceSyncCommand : CommandBase, ICommandWithSpotifyAuth, ICommandFo
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+        ILogger<ForceSyncCommand> logger
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
     {
     }
 
@@ -37,7 +37,7 @@ public class ForceSyncCommand : CommandBase, ICommandWithSpotifyAuth, ICommandFo
         );
         var minProgress = allCurrentProgress.Min();
         var result = await this.ApplyToAllParticipants(
-            (client, _) => client.Player.SeekTo(new PlayerSeekToRequest(minProgress)), LoggerClient
+            (client, _) => client.Player.SeekTo(new PlayerSeekToRequest(minProgress)), Logger
         );
         await NotifyAllAsync(Session, $"{UserName} сбрасывает прогресс воспроизведения трека до {minProgress} мс\n{result.ToFormattedString()}");
     }

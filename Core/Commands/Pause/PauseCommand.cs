@@ -5,9 +5,9 @@ using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web;
 using Telegram.Bot;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.Pause;
 
@@ -19,8 +19,8 @@ public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAll
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+        ILogger<PauseCommand> logger
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
     {
     }
 
@@ -35,7 +35,7 @@ public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAll
             {
                 await client.Player.PausePlayback();
                 await this.SaveDeviceIdAsync(client, participant);
-            }, LoggerClient
+            }, Logger
         );
         await NotifyAllAsync(Session, $"{UserName} ставит воспроизведение на паузу\n{result.ToFormattedString()}");
         try
@@ -55,7 +55,7 @@ public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAll
         }
         catch (Exception e)
         {
-            await LoggerClient.ErrorAsync(e, "Failed to save context");
+            Logger.LogError(e, "Failed to save context");
         }
     }
 }

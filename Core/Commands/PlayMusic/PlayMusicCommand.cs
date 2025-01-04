@@ -6,10 +6,10 @@ using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Spotify.Links;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.PlayMusic;
 
@@ -27,8 +27,8 @@ public class PlayMusicCommand
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+        ILogger<PlayMusicCommand> logger
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
     {
         this.spotifyLinksRecognizeService = spotifyLinksRecognizeService;
     }
@@ -82,7 +82,7 @@ public class PlayMusicCommand
         var trackUri = track?.Uri ?? trackId.ToTrackUri();
         var shouldAddToQueue = await ShouldAddToQueueAsync();
         var result = shouldAddToQueue
-            ? await this.ApplyToAllParticipants((client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(trackUri)), LoggerClient)
+            ? await this.ApplyToAllParticipants((client, _) => client.Player.AddToQueue(new PlayerAddToQueueRequest(trackUri)), Logger)
             : await this.ApplyToAllParticipants(
                 async (client, participant) =>
                 {
@@ -97,7 +97,7 @@ public class PlayMusicCommand
                         }
                     );
                     await this.SaveDeviceIdAsync(client, participant);
-                }, LoggerClient
+                }, Logger
             );
 
         var text = track is null
@@ -134,7 +134,7 @@ public class PlayMusicCommand
                     }
                 );
                 await this.SaveDeviceIdAsync(client, participant);
-            }, LoggerClient
+            }, Logger
         );
         var albumText = album is null
             ? $"[альбома]({albumLink})"
@@ -161,7 +161,7 @@ public class PlayMusicCommand
                     }
                 );
                 await this.SaveDeviceIdAsync(client, participant);
-            }, LoggerClient
+            }, Logger
         );
         var playlistText = playlist is null
             ? $"[плейлиста]({playlistLink})"

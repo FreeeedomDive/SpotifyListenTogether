@@ -5,9 +5,9 @@ using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Client;
 using Core.Whitelist;
+using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web;
 using Telegram.Bot;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.Unpause;
 
@@ -19,8 +19,8 @@ public class UnpauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandWith
         ISpotifyClientStorage spotifyClientStorage,
         ISpotifyClientFactory spotifyClientFactory,
         IWhitelistService whitelistService,
-        ILoggerClient loggerClient
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, loggerClient)
+        ILogger<UnpauseCommand> logger
+    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
     {
     }
 
@@ -46,7 +46,7 @@ public class UnpauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandWith
             {
                 playerResumePlaybackRequest.DeviceId = participant.DeviceId;
                 return client.Player.ResumePlayback(playerResumePlaybackRequest);
-            }, LoggerClient
+            }, Logger
         );
         await NotifyAllAsync(Session, $"{UserName} возобновляет воспроизведение\n{result.ToFormattedString()}");
     }
