@@ -44,6 +44,7 @@ public abstract class CommandBase : ICommandBase
             var isWhitelisted = await whitelistService.IsUserWhitelistedAsync(UserId);
             if (!isWhitelisted && this is not WhitelistCommand)
             {
+                Logger.LogWarning("User {UserName} ({UserId}) tried to use {CommandName}, but not whitelisted", UserName, UserId, CommandName);
                 return;
             }
 
