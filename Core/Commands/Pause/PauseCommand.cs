@@ -30,6 +30,7 @@ public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAll
 
     protected override async Task ExecuteAsync()
     {
+        var playback = await SpotifyClient.Player.GetCurrentPlayback();
         var result = await this.ApplyToAllParticipants(
             async (client, participant) =>
             {
@@ -40,7 +41,6 @@ public class PauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandForAll
         await NotifyAllAsync(Session, $"{UserName} ставит воспроизведение на паузу\n{result.ToFormattedString()}");
         try
         {
-            var playback = await SpotifyClient.Player.GetCurrentPlayback();
             if (playback.Context is null)
             {
                 return;
