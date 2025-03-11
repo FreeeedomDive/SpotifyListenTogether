@@ -85,7 +85,7 @@ public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommand
         }
 
         return $"{track.ToFormattedString()} "
-               + $"{FormatTime(Session.Context.PositionMs ?? 0)}";
+               + $"{FormatTime(Session.Context.PositionMs ?? 0)}".Escape();
     }
 
     private static string FormatTime(int positionMs)

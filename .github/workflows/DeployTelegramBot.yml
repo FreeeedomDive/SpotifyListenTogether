@@ -2,9 +2,6 @@ name: Deploy TelegramBot
 
 on:
   workflow_dispatch:
-    inputs:
-      project:
-        description: 'Deploy TelegramBot'
 
 jobs:
   deploy:

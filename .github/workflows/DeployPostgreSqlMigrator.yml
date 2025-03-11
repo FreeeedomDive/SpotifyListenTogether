@@ -2,9 +2,6 @@ name: Apply PostgreSql migrations
 
 on:
   workflow_dispatch:
-    inputs:
-      project:
-        description: 'Apply PostgreSql migrations'
 
 jobs:
   deploy:
