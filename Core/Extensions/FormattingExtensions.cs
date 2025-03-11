@@ -6,9 +6,14 @@ public static class FormattingExtensions
 {
     public static string ToTrackUri(this string track)
     {
-        return $"spotify:track:{track}";
+        return $"{TrackUriPrefix}{track}";
     }
-    
+
+    public static string GetIdFromTrackUri(this string trackUri)
+    {
+        return trackUri[TrackUriPrefix.Length..];
+    }
+
     public static string ToFormattedString(this FullTrack track)
     {
         return $"[{(track.Artists.First().Name + " - " + track.Name).Escape()}]({track.ExternalUrls["spotify"]})";
@@ -42,6 +47,10 @@ public static class FormattingExtensions
                   .Replace("!", "\\!")
                   .Replace("=", "\\=")
                   .Replace("<", "\\<")
-                  .Replace(">", "\\>");
+                  .Replace(">", "\\>")
+                  .Replace("[", "\\[")
+                  .Replace("]", "\\]");
     }
+
+    private const string TrackUriPrefix = "spotify:track:";
 }

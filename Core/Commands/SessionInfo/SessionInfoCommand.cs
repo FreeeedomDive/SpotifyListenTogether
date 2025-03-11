@@ -32,6 +32,9 @@ public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommand
 
     protected override async Task ExecuteAsync()
     {
+        var sessionIdTitle = $"*Сессия* `{Session.Id}`";
+        const string savedPlaybackTitle = "Последний сохраненный плейбэк";
+        var savedPlayback = await GetSavedPlaybackContent();
         var tasks = UserIdToSpotifyClient.Select(
             async pair =>
             {
@@ -52,7 +55,7 @@ public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommand
 
                 return responseBuilder
                        .Append(spotifyCurrentlyPlayingTrack.ToFormattedString())
-                       .AppendLine($@" - {TimeSpan.FromMilliseconds(currentPlayback.ProgressMs):m\:ss\.fff}".Escape())
+                       .AppendLine($" - {FormatTime(currentPlayback.ProgressMs)}")
                        // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract - context actually CAN BE null
                        .AppendLine($"Контекст: {(context is null ? "null" : context.ToFormattedString())}")
                        .AppendLine($"Устройство: {device.Name} ({device.Id})".Escape())
@@ -61,6 +64,32 @@ public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommand
             }
         );
         var playbackInfos = await Task.WhenAll(tasks);
-        await SendResponseAsync(UserId, string.Join("\n\n", playbackInfos), ParseMode.MarkdownV2);
+        var messageParts = new List<string>();
+        messageParts.Add(sessionIdTitle);
+        messageParts.AddRange(playbackInfos);
+        messageParts.Add($"{savedPlaybackTitle}\n{savedPlayback}");
+        await SendResponseAsync(UserId, string.Join("\n\n", messageParts), ParseMode.MarkdownV2);
+    }
+
+    private async Task<string> GetSavedPlaybackContent()
+    {
+        if (Session.Context?.TrackUri is null)
+        {
+            return "---";
+        }
+
+        var track = await SpotifyClient.Tracks.TryGet(Session.Context.TrackUri.GetIdFromTrackUri());
+        if (track is null)
+        {
+            return "---";
+        }
+
+        return $"{track.ToFormattedString()} "
+               + $"{FormatTime(Session.Context.PositionMs ?? 0)}";
+    }
+
+    private static string FormatTime(int positionMs)
+    {
+        return $@"{TimeSpan.FromMilliseconds(positionMs):m\:ss\.fff}".Escape();
     }
 }
