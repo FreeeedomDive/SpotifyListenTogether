@@ -55,7 +55,7 @@ public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommand
 
                 return responseBuilder
                        .Append(spotifyCurrentlyPlayingTrack.ToFormattedString())
-                       .AppendLine($" - {FormatTime(currentPlayback.ProgressMs)}")
+                       .AppendLine($" - {FormatTime(currentPlayback.ProgressMs)}".Escape())
                        // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract - context actually CAN BE null
                        .AppendLine($"Контекст: {(context is null ? "null" : context.ToFormattedString())}")
                        .AppendLine($"Устройство: {device.Name} ({device.Id})".Escape())
@@ -75,13 +75,13 @@ public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommand
     {
         if (Session.Context?.TrackUri is null)
         {
-            return "---";
+            return "Нет сохраненных треков";
         }
 
         var track = await SpotifyClient.Tracks.TryGet(Session.Context.TrackUri.GetIdFromTrackUri());
         if (track is null)
         {
-            return "---";
+            return "Нет сохраненных треков";
         }
 
         return $"{track.ToFormattedString()} "
@@ -90,6 +90,6 @@ public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommand
 
     private static string FormatTime(int positionMs)
     {
-        return $@"{TimeSpan.FromMilliseconds(positionMs):m\:ss\.fff}".Escape();
+        return $@"{TimeSpan.FromMilliseconds(positionMs):m\:ss\.fff}";
     }
 }
