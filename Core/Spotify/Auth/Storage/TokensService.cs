@@ -1,5 +1,4 @@
 using Core.Extensions;
-using Newtonsoft.Json;
 using SpotifyAPI.Web;
 using SpotifyAuth.Api.Client;
 using SpotifyAuth.Dto;
@@ -7,15 +6,13 @@ using SqlRepositoryBase.Core.Repository;
 
 namespace Core.Spotify.Auth.Storage;
 
-public class TokensRepository : ITokensRepository
+public class TokensService : ITokensService
 {
-    public TokensRepository(
-        ISqlRepository<TokenStorageElement> sqlRepository,
+    public TokensService(
         ISqlRepository<AuthApiUsersStorageElement> authApiUsersRepository,
         ISpotifyAuthApiClient spotifyAuthApiClient
     )
     {
-        this.sqlRepository = sqlRepository;
         this.authApiUsersRepository = authApiUsersRepository;
         this.spotifyAuthApiClient = spotifyAuthApiClient;
     }
@@ -23,11 +20,16 @@ public class TokensRepository : ITokensRepository
     public async Task<(long UserId, AuthorizationCodeTokenResponse token)[]> ReadAllAsync()
     {
         var userIds = await authApiUsersRepository.ReadAllAsync();
+        if (userIds.Length == 0)
+        {
+            return Array.Empty<(long UserId, AuthorizationCodeTokenResponse token)>();
+        }
+
         var tokens = await spotifyAuthApiClient.Auth.GetAsync(userIds.Select(x => x.Id).ToArray());
         var result = userIds
                      .Select(x => new
                          {
-                             TelegramUserId = x.TelegramUserId,
+                             x.TelegramUserId,
                              Token = tokens.Items.FirstOrDefault(t => t?.Id == x.Id),
                          }
                      )
@@ -89,7 +91,6 @@ public class TokensRepository : ITokensRepository
         };
     }
 
-    private readonly ISqlRepository<TokenStorageElement> sqlRepository;
     private readonly ISqlRepository<AuthApiUsersStorageElement> authApiUsersRepository;
     private readonly ISpotifyAuthApiClient spotifyAuthApiClient;
 }

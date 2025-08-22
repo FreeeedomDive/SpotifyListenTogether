@@ -2,6 +2,7 @@ using Core.Extensions;
 using Core.Settings;
 using Core.Spotify.Auth;
 using Core.Spotify.Auth.Storage;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SpotifyAPI.Web;
 using Telegram.Bot;
@@ -13,24 +14,27 @@ public class SpotifyClientFactory : ISpotifyClientFactory
     public SpotifyClientFactory(
         ISpotifyClientStorage spotifyClientStorage,
         ITelegramBotClient telegramBotClient,
-        ITokensRepository tokensRepository,
-        IOptions<SpotifySettings> spotifySettings
+        ITokensService tokensService,
+        IOptions<SpotifySettings> spotifySettings,
+        ILogger<SpotifyClientFactory> logger
     )
     {
         this.spotifyClientStorage = spotifyClientStorage;
         this.telegramBotClient = telegramBotClient;
-        this.tokensRepository = tokensRepository;
+        this.tokensService = tokensService;
         this.spotifySettings = spotifySettings;
+        this.logger = logger;
     }
 
     public async Task InitializeAllSavedClientsAsync()
     {
-        var savedTokens = await tokensRepository.ReadAllAsync();
+        var savedTokens = await tokensService.ReadAllAsync();
         foreach (var (userId, token) in savedTokens)
         {
             var savedClient = CreateClient(token);
             spotifyClientStorage.CreateOrUpdate(userId, savedClient);
         }
+        logger.LogInformation("Initialized {count} spotify clients", savedTokens.Length);
     }
 
     public async Task<ISpotifyClient?> GetAsync(long telegramUserId)
@@ -83,13 +87,13 @@ public class SpotifyClientFactory : ISpotifyClientFactory
         );
         var client = CreateClient(tokenResponse);
         spotifyClientStorage.CreateOrUpdate(telegramUserId, client);
-        await tokensRepository.CreateOrUpdateAsync(telegramUserId, tokenResponse);
+        await tokensService.CreateOrUpdateAsync(telegramUserId, tokenResponse);
         return client;
     }
 
     private async Task<ISpotifyClient?> RestoreClientAsync(long telegramUserId)
     {
-        var savedToken = await tokensRepository.TryReadAsync(telegramUserId);
+        var savedToken = await tokensService.TryReadAsync(telegramUserId);
         if (savedToken is null)
         {
             return null;
@@ -114,6 +118,7 @@ public class SpotifyClientFactory : ISpotifyClientFactory
 
     private readonly ISpotifyClientStorage spotifyClientStorage;
     private readonly IOptions<SpotifySettings> spotifySettings;
+    private readonly ILogger<SpotifyClientFactory> logger;
     private readonly ITelegramBotClient telegramBotClient;
-    private readonly ITokensRepository tokensRepository;
+    private readonly ITokensService tokensService;
 }

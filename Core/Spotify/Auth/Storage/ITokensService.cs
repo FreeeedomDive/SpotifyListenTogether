@@ -2,7 +2,7 @@ using SpotifyAPI.Web;
 
 namespace Core.Spotify.Auth.Storage;
 
-public interface ITokensRepository
+public interface ITokensService
 {
     Task<(long UserId, AuthorizationCodeTokenResponse token)[]> ReadAllAsync();
     Task<AuthorizationCodeTokenResponse?> TryReadAsync(long userId);
