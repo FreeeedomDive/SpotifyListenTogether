@@ -29,9 +29,10 @@ public class TokensService : ITokensService
         }
 
         var ids = apiUsers.Select(x => x.Id).ToArray();
-        logger.LogInformation("Read ids {ids}", string.Join(",", ids));
-        var tokens = await spotifyAuthApiClient.Auth.GetAsync(ids);
-        logger.LogInformation("Found {count} tokens", tokens.Items.Length);
+        var tokens = await spotifyAuthApiClient.Auth.GetAsync(new SearchTokensDto
+        {
+            Ids = ids,
+        });
         var result = apiUsers
                      .Select(x => new
                          {
@@ -42,7 +43,6 @@ public class TokensService : ITokensService
                      .Where(x => x.Token is not null)
                      .Select(x => (x.TelegramUserId, ToSpotifyToken(x.Token!)))
                      .ToArray();
-        logger.LogInformation("Result {count} items", result.Length);
 
         return result;
     }
