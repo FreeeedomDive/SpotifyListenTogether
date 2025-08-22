@@ -52,16 +52,22 @@ public class TokensService : ITokensService
         return token is null ? null : ToSpotifyToken(token);
     }
 
-    public async Task CreateOrUpdateAsync(long userId, AuthorizationCodeTokenResponse token)
+    public async Task<Guid> CreateOrUpdateAsync(long userId, AuthorizationCodeTokenResponse token)
     {
-        var apiUser = (await authApiUsersRepository.FindAsync(x => x.TelegramUserId == userId)).FirstOrDefault()
-                      ?? new AuthApiUsersStorageElement
-                      {
-                          TelegramUserId = userId,
-                          Id = Guid.NewGuid(),
-                      };
+        var userStorageElement = (await authApiUsersRepository.FindAsync(x => x.TelegramUserId == userId)).FirstOrDefault();
+        if (userStorageElement is null)
+        {
+            userStorageElement = new AuthApiUsersStorageElement
+            {
+                TelegramUserId = userId,
+                Id = Guid.NewGuid(),
+            };
+            await authApiUsersRepository.CreateAsync(userStorageElement);
+        }
 
-        await spotifyAuthApiClient.Auth.CreateOrUpdateAsync(ToDto(apiUser.Id, token));
+        await spotifyAuthApiClient.Auth.CreateOrUpdateAsync(ToDto(userStorageElement.Id, token));
+
+        return userStorageElement.Id;
     }
 
     private static AuthorizationCodeTokenResponse ToSpotifyToken(SpotifyAuthorizationCodeDto dto)
@@ -77,7 +83,7 @@ public class TokensService : ITokensService
         };
     }
 
-    public static SpotifyAuthorizationCodeDto ToDto(Guid userId, AuthorizationCodeTokenResponse token)
+    private static SpotifyAuthorizationCodeDto ToDto(Guid userId, AuthorizationCodeTokenResponse token)
     {
         return new SpotifyAuthorizationCodeDto
         {

@@ -42,7 +42,7 @@ builder.Services.AddSingleton<ISpotifyClientStorage, SpotifyClientStorage>();
 builder.Services.AddTransient<ISpotifyClientFactory, SpotifyClientFactory>();
 
 builder.Services.AddTransient<ICommandsRecognizer, CommandsRecognizer>();
-var allTypes = typeof(ICommandBase).Assembly.GetTypes().ToArray();
+var allTypes = typeof(ICommandBase).Assembly.GetTypes();
 var commandTypes = allTypes.Where(t => typeof(ICommandBase).IsAssignableFrom(t) && t.IsInterface && t != typeof(ICommandBase)).ToArray();
 foreach (var commandInterfaceType in commandTypes)
 {
