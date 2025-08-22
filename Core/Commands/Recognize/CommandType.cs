@@ -20,7 +20,6 @@ public enum CommandType
     Start,
     ForceAuth,
     Whitelist,
-    Migration,
 
     // stats
     StatsByArtists,

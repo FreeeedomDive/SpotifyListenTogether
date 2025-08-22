@@ -1,6 +1,5 @@
 using Core.Commands.Base;
 using Core.Commands.CreateSession;
-using Core.Commands.Dev;
 using Core.Commands.ForceAuth;
 using Core.Commands.ForceSync;
 using Core.Commands.GroupAddToQueue;
@@ -34,8 +33,7 @@ public class CommandsFactory : ICommandsFactory
         IForceAuthCommand forceAuthCommand,
         ISessionInfoCommand sessionInfoCommand,
         IPlaylistStatsByArtistCommand playlistStatsByArtistCommand,
-        IPlayMusicCommand playMusicCommand,
-        IMigrationCommand migrationCommand
+        IPlayMusicCommand playMusicCommand
     )
     {
         commandBuilders = new Dictionary<CommandType, Func<ICommandBase>>
@@ -54,7 +52,6 @@ public class CommandsFactory : ICommandsFactory
             { CommandType.SessionInfo, () => sessionInfoCommand },
             { CommandType.StatsByArtists, () => playlistStatsByArtistCommand },
             { CommandType.PlayMusic, () => playMusicCommand },
-            { CommandType.Migration, () => migrationCommand },
         };
     }
 

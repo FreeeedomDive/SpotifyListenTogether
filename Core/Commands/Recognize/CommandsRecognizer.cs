@@ -21,7 +21,6 @@ public class CommandsRecognizer : ICommandsRecognizer
                                .AddIf(messageText.StartsWith("/_wl"), CommandType.Whitelist)
                                .AddIf(messageText.StartsWith("/_session"), CommandType.SessionInfo)
                                .AddIf(messageText.StartsWith("/statsByArtists"), CommandType.StatsByArtists)
-                               .AddIf(messageText.StartsWith("/_migration"), CommandType.Migration)
                                .AddIf(messageText.Split("\n").Length > 1, CommandType.GroupAddToQueue)
                                .AddIf(true, CommandType.PlayMusic);
 
