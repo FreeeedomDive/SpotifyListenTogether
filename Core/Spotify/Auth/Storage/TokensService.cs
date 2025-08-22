@@ -1,4 +1,5 @@
 using Core.Extensions;
+using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web;
 using SpotifyAuth.Api.Client;
 using SpotifyAuth.Dto;
@@ -10,23 +11,28 @@ public class TokensService : ITokensService
 {
     public TokensService(
         ISqlRepository<AuthApiUsersStorageElement> authApiUsersRepository,
-        ISpotifyAuthApiClient spotifyAuthApiClient
+        ISpotifyAuthApiClient spotifyAuthApiClient,
+        ILogger<TokensService> logger
     )
     {
         this.authApiUsersRepository = authApiUsersRepository;
         this.spotifyAuthApiClient = spotifyAuthApiClient;
+        this.logger = logger;
     }
 
     public async Task<(long UserId, AuthorizationCodeTokenResponse token)[]> ReadAllAsync()
     {
-        var userIds = await authApiUsersRepository.ReadAllAsync();
-        if (userIds.Length == 0)
+        var apiUsers = await authApiUsersRepository.ReadAllAsync();
+        if (apiUsers.Length == 0)
         {
             return Array.Empty<(long UserId, AuthorizationCodeTokenResponse token)>();
         }
 
-        var tokens = await spotifyAuthApiClient.Auth.GetAsync(userIds.Select(x => x.Id).ToArray());
-        var result = userIds
+        var ids = apiUsers.Select(x => x.Id).ToArray();
+        logger.LogInformation("Read ids {ids}", string.Join(",", ids));
+        var tokens = await spotifyAuthApiClient.Auth.GetAsync(ids);
+        logger.LogInformation("Found {count} tokens", tokens.Items.Length);
+        var result = apiUsers
                      .Select(x => new
                          {
                              x.TelegramUserId,
@@ -36,6 +42,7 @@ public class TokensService : ITokensService
                      .Where(x => x.Token is not null)
                      .Select(x => (x.TelegramUserId, ToSpotifyToken(x.Token!)))
                      .ToArray();
+        logger.LogInformation("Result {count} items", result.Length);
 
         return result;
     }
@@ -99,4 +106,5 @@ public class TokensService : ITokensService
 
     private readonly ISqlRepository<AuthApiUsersStorageElement> authApiUsersRepository;
     private readonly ISpotifyAuthApiClient spotifyAuthApiClient;
+    private readonly ILogger<TokensService> logger;
 }
