@@ -13,6 +13,7 @@ public class DatabaseContext : PostgreSqlDbContext
     }
 
     public DbSet<TokenStorageElement> Tokens { get; set; }
+    public DbSet<AuthApiUsersStorageElement> AuthApiUsers { get; set; }
     public DbSet<SessionStorageElement> Sessions { get; set; }
     public DbSet<WhitelistStorageElement> Whitelist { get; set; }
 }
