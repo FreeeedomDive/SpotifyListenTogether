@@ -12,9 +12,10 @@ using Core.TelegramWorker;
 using Core.Whitelist;
 using Microsoft.Extensions.Options;
 using Serilog;
+using SpotifyAuth.Api.Client;
+using SpotifyAuth.Api.Client.Configuration;
 using SqlRepositoryBase.Configuration.Extensions;
 using Telegram.Bot;
-using TelemetryApp.Utilities.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,15 +23,18 @@ builder.Host.UseSerilog(
     (context, configuration) => configuration.ReadFrom.Configuration(context.Configuration)
 );
 
-var telegramSettingsSection = builder.Configuration.GetRequiredSection("Telegram");
-builder.Services.Configure<TelegramSettings>(telegramSettingsSection);
-var spotifySettingsSection = builder.Configuration.GetRequiredSection("Spotify");
-builder.Services.Configure<SpotifySettings>(spotifySettingsSection);
+builder.Services.Configure<TelegramSettings>(builder.Configuration.GetRequiredSection("Telegram"));
+builder.Services.Configure<SpotifySettings>(builder.Configuration.GetRequiredSection("Spotify"));
+
+builder.Services.Configure<ConnectionOptions>(builder.Configuration.GetRequiredSection("SpotifyAuthApi"));
+builder.Services.AddTransient<ISpotifyAuthApiClient>(
+    serviceProvider => SpotifyAuthApiClientProvider.Build(serviceProvider.GetRequiredService<IOptions<ConnectionOptions>>().Value.ServiceUrl)
+);
 
 builder.Services.ConfigureConnectionStringFromAppSettings(builder.Configuration.GetSection("PostgreSql"))
        .ConfigureDbContextFactory(connectionString => new DatabaseContext(connectionString))
        .ConfigurePostgreSql();
-builder.Services.AddTransient<ITokensRepository, TokensRepository>();
+builder.Services.AddTransient<ITokensService, TokensService>();
 builder.Services.AddTransient<ISessionsRepository, SessionsRepository>();
 builder.Services.AddTransient<ISpotifyLinksRecognizeService, SpotifyLinksRecognizeService>();
 builder.Services.AddSingleton<ISessionsService, SessionsService>();
@@ -38,7 +42,7 @@ builder.Services.AddSingleton<ISpotifyClientStorage, SpotifyClientStorage>();
 builder.Services.AddTransient<ISpotifyClientFactory, SpotifyClientFactory>();
 
 builder.Services.AddTransient<ICommandsRecognizer, CommandsRecognizer>();
-var allTypes = typeof(ICommandBase).Assembly.GetTypes().ToArray();
+var allTypes = typeof(ICommandBase).Assembly.GetTypes();
 var commandTypes = allTypes.Where(t => typeof(ICommandBase).IsAssignableFrom(t) && t.IsInterface && t != typeof(ICommandBase)).ToArray();
 foreach (var commandInterfaceType in commandTypes)
 {
