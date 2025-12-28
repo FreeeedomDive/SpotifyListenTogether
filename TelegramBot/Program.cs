@@ -12,8 +12,8 @@ using Core.TelegramWorker;
 using Core.Whitelist;
 using Microsoft.Extensions.Options;
 using Serilog;
-using SpotifyAuth.Api.Client;
-using SpotifyAuth.Api.Client.Configuration;
+using SpotifyHelpers.Api.Client;
+using SpotifyHelpers.Api.Client.Configuration;
 using SqlRepositoryBase.Configuration.Extensions;
 using Telegram.Bot;
 
@@ -26,9 +26,9 @@ builder.Host.UseSerilog(
 builder.Services.Configure<TelegramSettings>(builder.Configuration.GetRequiredSection("Telegram"));
 builder.Services.Configure<SpotifySettings>(builder.Configuration.GetRequiredSection("Spotify"));
 
-builder.Services.Configure<ConnectionOptions>(builder.Configuration.GetRequiredSection("SpotifyAuthApi"));
-builder.Services.AddTransient<ISpotifyAuthApiClient>(
-    serviceProvider => SpotifyAuthApiClientProvider.Build(serviceProvider.GetRequiredService<IOptions<ConnectionOptions>>().Value.ServiceUrl)
+builder.Services.Configure<SpotifyAuthApiConnectionOptions>(builder.Configuration.GetRequiredSection("SpotifyAuthApi"));
+builder.Services.AddTransient<ISpotifyHelpersApiClient>(
+    serviceProvider => SpotifyHelpersApiClientProvider.Build(serviceProvider.GetRequiredService<IOptions<SpotifyAuthApiConnectionOptions>>().Value.ServiceUrl)
 );
 
 builder.Services.ConfigureConnectionStringFromAppSettings(builder.Configuration.GetSection("PostgreSql"))

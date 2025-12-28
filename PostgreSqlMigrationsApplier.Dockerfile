@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 
 WORKDIR /src
 COPY ["Core/Core.csproj", "Core/"]
@@ -10,7 +10,7 @@ FROM build AS publish
 WORKDIR "/src/PostgreSqlMigrationsApplier"
 RUN dotnet publish "PostgreSqlMigrationsApplier.csproj" -c Release -o /app/publish
 
-FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "PostgreSqlMigrationsApplier.dll"]

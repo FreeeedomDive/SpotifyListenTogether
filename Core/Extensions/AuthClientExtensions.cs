@@ -1,6 +1,6 @@
-using SpotifyAuth.Api.Client.Auth;
-using SpotifyAuth.Dto;
-using SpotifyAuth.Dto.Exceptions;
+using SpotifyHelpers.Api.Client.Auth;
+using SpotifyHelpers.Dto.Auth;
+using SpotifyHelpers.Dto.Exceptions;
 
 namespace Core.Extensions;
 

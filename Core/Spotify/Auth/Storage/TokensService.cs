@@ -1,25 +1,16 @@
 using Core.Extensions;
-using Microsoft.Extensions.Logging;
 using SpotifyAPI.Web;
-using SpotifyAuth.Api.Client;
-using SpotifyAuth.Dto;
+using SpotifyHelpers.Api.Client;
+using SpotifyHelpers.Dto.Auth;
 using SqlRepositoryBase.Core.Repository;
 
 namespace Core.Spotify.Auth.Storage;
 
-public class TokensService : ITokensService
+public class TokensService(
+    ISqlRepository<AuthApiUsersStorageElement> authApiUsersRepository,
+    ISpotifyHelpersApiClient spotifyHelpersApiClient
+) : ITokensService
 {
-    public TokensService(
-        ISqlRepository<AuthApiUsersStorageElement> authApiUsersRepository,
-        ISpotifyAuthApiClient spotifyAuthApiClient,
-        ILogger<TokensService> logger
-    )
-    {
-        this.authApiUsersRepository = authApiUsersRepository;
-        this.spotifyAuthApiClient = spotifyAuthApiClient;
-        this.logger = logger;
-    }
-
     public async Task<(long UserId, AuthorizationCodeTokenResponse token)[]> ReadAllAsync()
     {
         var apiUsers = await authApiUsersRepository.ReadAllAsync();
@@ -29,7 +20,7 @@ public class TokensService : ITokensService
         }
 
         var ids = apiUsers.Select(x => x.Id).ToArray();
-        var tokens = await spotifyAuthApiClient.Auth.GetAsync(new SearchTokensDto
+        var tokens = await spotifyHelpersApiClient.Auth.GetAsync(new SearchTokensDto
         {
             Ids = ids,
         });
@@ -55,7 +46,7 @@ public class TokensService : ITokensService
             return null;
         }
 
-        var token = await spotifyAuthApiClient.Auth.TryGetAsync(apiUser.Id);
+        var token = await spotifyHelpersApiClient.Auth.TryGetAsync(apiUser.Id);
         return token is null ? null : ToSpotifyToken(token);
     }
 
@@ -72,7 +63,7 @@ public class TokensService : ITokensService
             await authApiUsersRepository.CreateAsync(userStorageElement);
         }
 
-        await spotifyAuthApiClient.Auth.CreateOrUpdateAsync(ToDto(userStorageElement.Id, token));
+        await spotifyHelpersApiClient.Auth.CreateOrUpdateAsync(ToDto(userStorageElement.Id, token));
 
         return userStorageElement.Id;
     }
@@ -103,8 +94,4 @@ public class TokensService : ITokensService
             CreatedAt = token.CreatedAt,
         };
     }
-
-    private readonly ISqlRepository<AuthApiUsersStorageElement> authApiUsersRepository;
-    private readonly ISpotifyAuthApiClient spotifyAuthApiClient;
-    private readonly ILogger<TokensService> logger;
 }
