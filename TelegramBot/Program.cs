@@ -6,7 +6,6 @@ using Core.Sessions;
 using Core.Sessions.Storage;
 using Core.Settings;
 using Core.Spotify.Auth.Storage;
-using Core.Spotify.Client;
 using Core.Spotify.Links;
 using Core.TelegramWorker;
 using Core.Whitelist;
@@ -24,22 +23,19 @@ builder.Host.UseSerilog(
 );
 
 builder.Services.Configure<TelegramSettings>(builder.Configuration.GetRequiredSection("Telegram"));
-builder.Services.Configure<SpotifySettings>(builder.Configuration.GetRequiredSection("Spotify"));
 
 builder.Services.Configure<SpotifyAuthApiConnectionOptions>(builder.Configuration.GetRequiredSection("SpotifyAuthApi"));
-builder.Services.AddTransient<ISpotifyHelpersApiClient>(
+builder.Services.AddSingleton<ISpotifyHelpersApiClient>(
     serviceProvider => SpotifyHelpersApiClientProvider.Build(serviceProvider.GetRequiredService<IOptions<SpotifyAuthApiConnectionOptions>>().Value.ServiceUrl)
 );
 
 builder.Services.ConfigureConnectionStringFromAppSettings(builder.Configuration.GetSection("PostgreSql"))
        .ConfigureDbContextFactory(connectionString => new DatabaseContext(connectionString))
        .ConfigurePostgreSql();
-builder.Services.AddTransient<ITokensService, TokensService>();
+builder.Services.AddTransient<ISpotifyProfilesService, SpotifyProfilesService>();
 builder.Services.AddTransient<ISessionsRepository, SessionsRepository>();
 builder.Services.AddTransient<ISpotifyLinksRecognizeService, SpotifyLinksRecognizeService>();
 builder.Services.AddSingleton<ISessionsService, SessionsService>();
-builder.Services.AddSingleton<ISpotifyClientStorage, SpotifyClientStorage>();
-builder.Services.AddTransient<ISpotifyClientFactory, SpotifyClientFactory>();
 
 builder.Services.AddTransient<ICommandsRecognizer, CommandsRecognizer>();
 var allTypes = typeof(ICommandBase).Assembly.GetTypes();
@@ -67,9 +63,6 @@ var app = builder.Build();
 
 var sessionsService = app.Services.GetRequiredService<ISessionsService>();
 await sessionsService.InitializeAsync();
-
-var spotifyClientFactory = app.Services.GetRequiredService<ISpotifyClientFactory>();
-await spotifyClientFactory.InitializeAllSavedClientsAsync();
 
 var telegramBotWorker = app.Services.GetRequiredService<ITelegramBotWorker>();
 await telegramBotWorker.StartAsync();

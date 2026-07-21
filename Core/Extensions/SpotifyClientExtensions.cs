@@ -1,40 +1,41 @@
-using SpotifyAPI.Web;
+using SpotifyHelpers.Api.Client.Metadata;
+using SpotifyHelpers.Dto.Spotify;
 
 namespace Core.Extensions;
 
 public static class SpotifyClientExtensions
 {
-    public static async Task<FullTrack?> TryGet(this ITracksClient client, string trackId)
+    public static async Task<SpotifyTrackDto?> TryGetTrackAsync(this IMetadataClient client, string trackId)
     {
         try
         {
-            return await client.Get(trackId);
+            return await client.GetTrackAsync(trackId);
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return null;
         }
     }
 
-    public static async Task<FullAlbum?> TryGet(this IAlbumsClient client, string albumId)
+    public static async Task<SpotifyAlbumDetailsDto?> TryGetAlbumAsync(this IMetadataClient client, string albumId)
     {
         try
         {
-            return await client.Get(albumId);
+            return await client.GetAlbumAsync(albumId);
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return null;
         }
     }
 
-    public static async Task<FullPlaylist?> TryGet(this IPlaylistsClient client, string playlistId)
+    public static async Task<SpotifyPlaylistDto?> TryGetPlaylistAsync(this IMetadataClient client, string playlistId)
     {
         try
         {
-            return await client.Get(playlistId);
+            return await client.GetPlaylistAsync(playlistId);
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return null;
         }

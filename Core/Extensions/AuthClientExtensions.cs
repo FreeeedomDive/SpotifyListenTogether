@@ -12,7 +12,7 @@ public static class AuthClientExtensions
         {
             return await client.GetAsync(userId);
         }
-        catch (TokenNotFoundException e)
+        catch (TokenNotFoundException)
         {
             return null;
         }

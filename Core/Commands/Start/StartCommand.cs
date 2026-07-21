@@ -1,8 +1,9 @@
 using Core.Commands.Base;
 using Core.Sessions;
-using Core.Spotify.Client;
+using Core.Spotify.Auth.Storage;
 using Core.Whitelist;
 using Microsoft.Extensions.Logging;
+using SpotifyHelpers.Api.Client;
 using Telegram.Bot;
 
 namespace Core.Commands.Start;
@@ -12,11 +13,11 @@ public class StartCommand : CommandBase, IStartCommand
     public StartCommand(
         ITelegramBotClient telegramBotClient,
         ISessionsService sessionsService,
-        ISpotifyClientStorage spotifyClientStorage,
-        ISpotifyClientFactory spotifyClientFactory,
+        ISpotifyProfilesService spotifyProfilesService,
+        ISpotifyHelpersApiClient spotifyHelpersApiClient,
         IWhitelistService whitelistService,
         ILogger<StartCommand> logger
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
+    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, whitelistService, logger)
     {
     }
 

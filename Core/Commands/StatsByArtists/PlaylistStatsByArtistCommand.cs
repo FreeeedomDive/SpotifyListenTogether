@@ -1,31 +1,29 @@
 using Core.Commands.Base;
-using Core.Commands.Base.Interfaces;
 using Core.Sessions;
-using Core.Spotify.Client;
+using Core.Spotify.Auth.Storage;
 using Core.Spotify.Links;
 using Core.Whitelist;
 using Microsoft.Extensions.Logging;
-using SpotifyAPI.Web;
+using SpotifyHelpers.Api.Client;
+using SpotifyHelpers.Dto.Spotify;
 using Telegram.Bot;
 
 namespace Core.Commands.StatsByArtists;
 
-public class PlaylistStatsByArtistCommand : CommandBase, ICommandWithSpotifyAuth, IPlaylistStatsByArtistCommand
+public class PlaylistStatsByArtistCommand : CommandBase, IPlaylistStatsByArtistCommand
 {
     public PlaylistStatsByArtistCommand(
         ISpotifyLinksRecognizeService spotifyLinksRecognizeService,
         ITelegramBotClient telegramBotClient,
         ISessionsService sessionsService,
-        ISpotifyClientStorage spotifyClientStorage,
-        ISpotifyClientFactory spotifyClientFactory,
+        ISpotifyProfilesService spotifyProfilesService,
+        ISpotifyHelpersApiClient spotifyHelpersApiClient,
         IWhitelistService whitelistService,
         ILogger<PlaylistStatsByArtistCommand> logger
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
+    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, whitelistService, logger)
     {
         this.spotifyLinksRecognizeService = spotifyLinksRecognizeService;
     }
-
-    public ISpotifyClient SpotifyClient { get; set; } = null!;
 
     protected override async Task ExecuteAsync()
     {
@@ -45,8 +43,9 @@ public class PlaylistStatsByArtistCommand : CommandBase, ICommandWithSpotifyAuth
 
         var tracks = await GetTracksInPlaylistAsync(spotifyLink.Id);
         var artists = tracks
-                      .SelectMany(track => track.Artists)
-                      .GroupBy(artist => artist.Name)
+                      .SelectMany(track => track.Artists ?? [])
+                      .Where(artist => artist is not null)
+                      .GroupBy(artist => artist.Name ?? string.Empty)
                       .Select(group => (Name: group.Key, Count: group.Count()))
                       .OrderByDescending(pair => pair.Count)
                       .Select(pair => $"{pair.Name}: {pair.Count}");
@@ -54,27 +53,27 @@ public class PlaylistStatsByArtistCommand : CommandBase, ICommandWithSpotifyAuth
         await SendResponseAsync(UserId, string.Join("\n", artists));
     }
 
-    private async Task<FullTrack[]> GetTracksInPlaylistAsync(string playlistId)
+    private async Task<SpotifyTrackDto[]> GetTracksInPlaylistAsync(string playlistId)
     {
         // maximum possible tracks in playlist is 10000
         var total = 10000;
-        List<FullTrack> tracks = new();
-        while (tracks.Count < total)
+        var offset = 0;
+        List<SpotifyTrackDto> tracks = new();
+        while (offset < total)
         {
-            var currentPaging = await SpotifyClient.Playlists.GetItems(
-                playlistId, new PlaylistGetItemsRequest
-                {
-                    Offset = tracks.Count,
-                    Limit = 100,
-                }
-            );
-            total = currentPaging.Total ?? 0;
-            var currentPageTracks = currentPaging
-                                    .Items!
-                                    .Where(x => x.Track is FullTrack)
-                                    .Select(x => (x.Track as FullTrack)!)
+            var currentPaging = await SpotifyHelpersApiClient.Metadata.GetPlaylistItemsAsync(playlistId, offset);
+            total = currentPaging.Total;
+            var pageItems = currentPaging.Items ?? [];
+            var currentPageTracks = pageItems
+                                    .Where(x => x?.Track is not null)
+                                    .Select(x => x.Track!)
                                     .ToList();
             tracks.AddRange(currentPageTracks);
+            offset += pageItems.Length;
+            if (pageItems.Length == 0)
+            {
+                break;
+            }
         }
 
         return tracks.ToArray();
