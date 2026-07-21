@@ -5,9 +5,10 @@ using Core.Commands.Whitelist;
 using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
-using Core.Spotify.Client;
+using Core.Spotify.Auth.Storage;
 using Core.Whitelist;
 using Microsoft.Extensions.Logging;
+using SpotifyHelpers.Api.Client;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
@@ -19,8 +20,8 @@ public abstract class CommandBase : ICommandBase
     protected CommandBase(
         ITelegramBotClient telegramBotClient,
         ISessionsService sessionsService,
-        ISpotifyClientStorage spotifyClientStorage,
-        ISpotifyClientFactory spotifyClientFactory,
+        ISpotifyProfilesService spotifyProfilesService,
+        ISpotifyHelpersApiClient spotifyHelpersApiClient,
         IWhitelistService whitelistService,
         ILogger logger
     )
@@ -28,8 +29,8 @@ public abstract class CommandBase : ICommandBase
         this.whitelistService = whitelistService;
         TelegramBotClient = telegramBotClient;
         SessionsService = sessionsService;
-        SpotifyClientStorage = spotifyClientStorage;
-        SpotifyClientFactory = spotifyClientFactory;
+        this.spotifyProfilesService = spotifyProfilesService;
+        SpotifyHelpersApiClient = spotifyHelpersApiClient;
         Logger = logger;
     }
 
@@ -74,38 +75,39 @@ public abstract class CommandBase : ICommandBase
 
             if (this is ICommandWithSpotifyAuth commandWithSpotifyAuth)
             {
-                var spotifyClient = await SpotifyClientFactory.GetAsync(UserId);
-                if (spotifyClient is null)
+                var profileId = await spotifyProfilesService.TryGetAuthorizedProfileIdAsync(UserId);
+                if (profileId is null)
                 {
                     await SendResponseAsync(UserId, "Сначала нужно пройти авторизацию в Spotify");
                     return;
                 }
 
-                commandWithSpotifyAuth.SpotifyClient = spotifyClient;
+                commandWithSpotifyAuth.SpotifyProfileId = profileId.Value;
             }
 
             if (this is ICommandForAllParticipants commandForAllParticipants)
             {
-                commandForAllParticipants.UserIdToSpotifyClient =
-                    session!
-                        .Participants
-                        .Select(participant => (Participant: participant, SpotifyClient: SpotifyClientStorage.TryRead(participant.UserId)))
-                        .Where(pair => pair.SpotifyClient is not null)
-                        .ToDictionary(pair => pair.Participant.UserId, pair => (pair.Participant, pair.SpotifyClient!));
+                var profileIds = await spotifyProfilesService.ReadAuthorizedProfileIdsAsync(
+                    session!.Participants.Select(x => x.UserId));
+                commandForAllParticipants.UserIdToSpotifyProfile = session.Participants
+                    .Where(x => profileIds.ContainsKey(x.UserId))
+                    .ToDictionary(
+                        x => x.UserId,
+                        x => (Participant: x, ProfileId: profileIds[x.UserId]));
             }
 
             if (this is ICommandWithAliveDeviceValidation commandWithAliveDeviceValidation)
             {
                 await commandWithAliveDeviceValidation.ApplyToAllParticipants(
-                    async (spotifyClient, participant) =>
+                    async (profileId, participant) =>
                     {
                         if (participant.DeviceId is null)
                         {
                             return;
                         }
 
-                        var devices = await spotifyClient.Player.GetAvailableDevices();
-                        if (devices.Devices.All(x => x.Id != participant.DeviceId))
+                        var devices = await SpotifyHelpersApiClient.PlayerV2.GetDevicesAsync(profileId);
+                        if (devices.Items.All(x => x.Id != participant.DeviceId))
                         {
                             participant.DeviceId = null;
                         }
@@ -117,9 +119,7 @@ public abstract class CommandBase : ICommandBase
 
             if (this is IInitiateSpotifyAuthCommand)
             {
-#pragma warning disable CS4014
-                Task.Run(StartSpotifyAuthAsync);
-#pragma warning restore CS4014
+                _ = StartSpotifyAuthAsync();
             }
 
             if (session is not null)
@@ -143,14 +143,25 @@ public abstract class CommandBase : ICommandBase
         try
         {
             var forceReAuth = this is IForceAuthCommand;
-            var spotifyClient = await SpotifyClientFactory.CreateOrGetAsync(UserId, forceReAuth);
-            if (spotifyClient is null)
+            var profileId = await spotifyProfilesService.GetOrCreateProfileIdAsync(UserId);
+            if (forceReAuth || !await spotifyProfilesService.IsAuthorizedAsync(profileId))
             {
-                await SendResponseAsync(UserId, "Истекло время для авторизации");
-                return;
+                var authorization = await SpotifyHelpersApiClient.Auth.StartSpotifyAuthorizationAsync(profileId);
+                await SendResponseAsync(
+                    UserId,
+                    $"Теперь нужно авторизоваться в Spotify по этой ссылке: {authorization.AuthorizationUrl}\n(ссылка активна минуту)");
+
+                var result = await SpotifyHelpersApiClient.Auth.WaitForSpotifyAuthorizationAsync(
+                    profileId,
+                    authorization.State);
+                if (!result.IsAuthorized)
+                {
+                    await SendResponseAsync(UserId, "Истекло время для авторизации");
+                    return;
+                }
             }
 
-            var spotifyUser = await spotifyClient.UserProfile.Current();
+            var spotifyUser = await SpotifyHelpersApiClient.PlayerV2.GetCurrentUserAsync(profileId);
             await SendResponseAsync(UserId, $"Успешная авторизация в Spotify как {spotifyUser.DisplayName}");
         }
         catch (Exception exception)
@@ -188,8 +199,8 @@ public abstract class CommandBase : ICommandBase
 
     private ITelegramBotClient TelegramBotClient { get; }
     protected ISessionsService SessionsService { get; }
-    private ISpotifyClientStorage SpotifyClientStorage { get; }
-    private ISpotifyClientFactory SpotifyClientFactory { get; }
+    protected ISpotifyHelpersApiClient SpotifyHelpersApiClient { get; }
     protected ILogger Logger { get; }
     private readonly IWhitelistService whitelistService;
+    private readonly ISpotifyProfilesService spotifyProfilesService;
 }

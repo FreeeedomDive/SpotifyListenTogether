@@ -4,10 +4,10 @@ using Core.Commands.Base.Interfaces;
 using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
-using Core.Spotify.Client;
+using Core.Spotify.Auth.Storage;
 using Core.Whitelist;
 using Microsoft.Extensions.Logging;
-using SpotifyAPI.Web;
+using SpotifyHelpers.Api.Client;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 
@@ -18,47 +18,45 @@ public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommand
     public SessionInfoCommand(
         ITelegramBotClient telegramBotClient,
         ISessionsService sessionsService,
-        ISpotifyClientStorage spotifyClientStorage,
-        ISpotifyClientFactory spotifyClientFactory,
+        ISpotifyProfilesService spotifyProfilesService,
+        ISpotifyHelpersApiClient spotifyHelpersApiClient,
         IWhitelistService whitelistService,
         ILogger<SessionInfoCommand> logger
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
+    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, whitelistService, logger)
     {
     }
 
     public Session Session { get; set; } = null!;
-    public Dictionary<long, (SessionParticipant Participant, ISpotifyClient SpotifyClient)> UserIdToSpotifyClient { get; set; } = null!;
-    public ISpotifyClient SpotifyClient { get; set; } = null!;
+    public Dictionary<long, (SessionParticipant Participant, Guid ProfileId)> UserIdToSpotifyProfile { get; set; } = null!;
+    public Guid SpotifyProfileId { get; set; }
 
     protected override async Task ExecuteAsync()
     {
         var sessionIdTitle = $"*Сессия* `{Session.Id}`";
         const string savedPlaybackTitle = "Последний сохраненный плейбэк";
         var savedPlayback = await GetSavedPlaybackContent();
-        var tasks = UserIdToSpotifyClient.Select(
+        var tasks = UserIdToSpotifyProfile.Select(
             async pair =>
             {
                 var participant = pair.Value.Participant;
-                var spotifyClient = pair.Value.SpotifyClient;
+                var profileId = pair.Value.ProfileId;
 
                 var responseBuilder = new StringBuilder().AppendLine($"*{participant.UserName}*");
-                var spotifyCurrentlyPlaying = await spotifyClient.Player.GetCurrentlyPlaying(new PlayerCurrentlyPlayingRequest());
-                // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract - spotifyCurrentlyPlaying actually CAN BE null
-                if (spotifyCurrentlyPlaying?.Item is not FullTrack spotifyCurrentlyPlayingTrack)
+                var spotifyCurrentlyPlaying = await SpotifyHelpersApiClient.PlayerV2.GetCurrentlyPlayingAsync(profileId);
+                if (!spotifyCurrentlyPlaying.IsActive || spotifyCurrentlyPlaying.Track is not { } spotifyCurrentlyPlayingTrack)
                 {
                     return responseBuilder.Append("Сейчас ничего не слушает").ToString();
                 }
 
-                var currentPlayback = await spotifyClient.Player.GetCurrentPlayback();
+                var currentPlayback = await SpotifyHelpersApiClient.PlayerV2.GetPlaybackAsync(profileId);
                 var device = currentPlayback.Device;
                 var context = currentPlayback.Context;
 
                 return responseBuilder
                        .Append(spotifyCurrentlyPlayingTrack.ToFormattedString())
                        .AppendLine($" - {FormatTime(currentPlayback.ProgressMs)}".Escape())
-                       // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract - context actually CAN BE null
                        .AppendLine($"Контекст: {(context is null ? "null" : context.ToFormattedString())}")
-                       .AppendLine($"Устройство: {device.Name} ({device.Id})".Escape())
+                       .AppendLine($"Устройство: {device?.Name ?? "none"} ({device?.Id ?? "none"})".Escape())
                        .Append($"Сохраненное устройство: {participant.DeviceId ?? "none"}")
                        .ToString();
             }
@@ -78,7 +76,7 @@ public class SessionInfoCommand : CommandBase, ICommandWithSpotifyAuth, ICommand
             return "Нет сохраненных треков";
         }
 
-        var track = await SpotifyClient.Tracks.TryGet(Session.Context.TrackUri.GetIdFromTrackUri());
+        var track = await SpotifyHelpersApiClient.Metadata.TryGetTrackAsync(Session.Context.TrackUri.GetIdFromTrackUri());
         if (track is null)
         {
             return "Нет сохраненных треков";

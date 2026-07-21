@@ -3,11 +3,12 @@ using Core.Commands.Base.Interfaces;
 using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
-using Core.Spotify.Client;
+using Core.Spotify.Auth.Storage;
 using Core.Spotify.Links;
 using Core.Whitelist;
 using Microsoft.Extensions.Logging;
-using SpotifyAPI.Web;
+using SpotifyHelpers.Api.Client;
+using SpotifyHelpers.Dto.Spotify;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 
@@ -24,19 +25,19 @@ public class GroupAddSongsToQueueCommand
         ISpotifyLinksRecognizeService spotifyLinksRecognizeService,
         ITelegramBotClient telegramBotClient,
         ISessionsService sessionsService,
-        ISpotifyClientStorage spotifyClientStorage,
-        ISpotifyClientFactory spotifyClientFactory,
+        ISpotifyProfilesService spotifyProfilesService,
+        ISpotifyHelpersApiClient spotifyHelpersApiClient,
         IWhitelistService whitelistService,
         ILogger<GroupAddSongsToQueueCommand> logger
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
+    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, whitelistService, logger)
     {
         this.spotifyLinksRecognizeService = spotifyLinksRecognizeService;
     }
 
     public Session Session { get; set; } = null!;
-    public Dictionary<long, (SessionParticipant Participant, ISpotifyClient SpotifyClient)> UserIdToSpotifyClient { get; set; } = null!;
+    public Dictionary<long, (SessionParticipant Participant, Guid ProfileId)> UserIdToSpotifyProfile { get; set; } = null!;
 
-    public ISpotifyClient SpotifyClient { get; set; } = null!;
+    public Guid SpotifyProfileId { get; set; }
 
     protected override async Task ExecuteAsync()
     {
@@ -45,13 +46,15 @@ public class GroupAddSongsToQueueCommand
         var tracksUris = spotifyLinks.Where(x => x?.Type == SpotifyLinkType.Track).Select(x => x!.Id.ToTrackUri()).ToArray();
 
         var result = await this.ApplyToAllParticipants(
-            async (spotifyClient, participant) =>
+            async (profileId, participant) =>
             {
                 foreach (var uri in tracksUris)
                 {
-                    await spotifyClient.Player.AddToQueue(
-                        new PlayerAddToQueueRequest(uri)
+                    await SpotifyHelpersApiClient.PlayerV2.AddToQueueAsync(
+                        profileId,
+                        new SpotifyQueueRequestDto
                         {
+                            Uri = uri,
                             DeviceId = participant.DeviceId,
                         }
                     );

@@ -17,53 +17,34 @@ using Core.Commands.Whitelist;
 
 namespace Core.Commands.Factory;
 
-public class CommandsFactory : ICommandsFactory
+public class CommandsFactory(IServiceProvider serviceProvider) : ICommandsFactory
 {
-    public CommandsFactory(
-        IStartCommand startCommand,
-        IWhitelistCommand whitelistCommand,
-        ICreateSessionCommand createSessionCommand,
-        ILeaveSessionCommand leaveSessionCommand,
-        IJoinSessionCommand joinSessionCommand,
-        IForceSyncCommand forceSyncCommand,
-        IPauseCommand pauseCommand,
-        IUnpauseCommand unpauseCommand,
-        INextTrackCommand nextTrackCommand,
-        IGroupAddSongsToQueueCommand groupAddSongsToQueueCommand,
-        IForceAuthCommand forceAuthCommand,
-        ISessionInfoCommand sessionInfoCommand,
-        IPlaylistStatsByArtistCommand playlistStatsByArtistCommand,
-        IPlayMusicCommand playMusicCommand
-    )
-    {
-        commandBuilders = new Dictionary<CommandType, Func<ICommandBase>>
-        {
-            { CommandType.Start, () => startCommand },
-            { CommandType.Whitelist, () => whitelistCommand },
-            { CommandType.CreateSession, () => createSessionCommand },
-            { CommandType.LeaveSession, () => leaveSessionCommand },
-            { CommandType.JoinSession, () => joinSessionCommand },
-            { CommandType.ForceSync, () => forceSyncCommand },
-            { CommandType.Pause, () => pauseCommand },
-            { CommandType.Unpause, () => unpauseCommand },
-            { CommandType.NextTrack, () => nextTrackCommand },
-            { CommandType.GroupAddToQueue, () => groupAddSongsToQueueCommand },
-            { CommandType.ForceAuth, () => forceAuthCommand },
-            { CommandType.SessionInfo, () => sessionInfoCommand },
-            { CommandType.StatsByArtists, () => playlistStatsByArtistCommand },
-            { CommandType.PlayMusic, () => playMusicCommand },
-        };
-    }
-
     public ICommandBase Build(CommandType commandType)
     {
-        if (!commandBuilders.TryGetValue(commandType, out var commandBuilder))
+        if (!commandTypes.TryGetValue(commandType, out var commandInterface))
         {
             throw new NotSupportedException($"Command {commandType} is not supported");
         }
 
-        return commandBuilder();
+        return serviceProvider.GetService(commandInterface) as ICommandBase
+               ?? throw new InvalidOperationException($"Command {commandType} is not registered");
     }
 
-    private readonly Dictionary<CommandType, Func<ICommandBase>> commandBuilders;
+    private readonly Dictionary<CommandType, Type> commandTypes = new()
+    {
+        { CommandType.Start, typeof(IStartCommand) },
+        { CommandType.Whitelist, typeof(IWhitelistCommand) },
+        { CommandType.CreateSession, typeof(ICreateSessionCommand) },
+        { CommandType.LeaveSession, typeof(ILeaveSessionCommand) },
+        { CommandType.JoinSession, typeof(IJoinSessionCommand) },
+        { CommandType.ForceSync, typeof(IForceSyncCommand) },
+        { CommandType.Pause, typeof(IPauseCommand) },
+        { CommandType.Unpause, typeof(IUnpauseCommand) },
+        { CommandType.NextTrack, typeof(INextTrackCommand) },
+        { CommandType.GroupAddToQueue, typeof(IGroupAddSongsToQueueCommand) },
+        { CommandType.ForceAuth, typeof(IForceAuthCommand) },
+        { CommandType.SessionInfo, typeof(ISessionInfoCommand) },
+        { CommandType.StatsByArtists, typeof(IPlaylistStatsByArtistCommand) },
+        { CommandType.PlayMusic, typeof(IPlayMusicCommand) },
+    };
 }

@@ -1,7 +1,7 @@
 using Core.Commands.Base.Interfaces;
 using Core.Sessions.Models;
 using Microsoft.Extensions.Logging;
-using SpotifyAPI.Web;
+using SpotifyHelpers.Api.Client.PlayerV2;
 
 namespace Core.Extensions;
 
@@ -9,18 +9,18 @@ public static class CommandsExtensions
 {
     public static async Task<(SessionParticipant Participant, bool Result)[]> ApplyToAllParticipants(
         this ICommandForAllParticipants command,
-        Func<ISpotifyClient, SessionParticipant, Task> action,
+        Func<Guid, SessionParticipant, Task> action,
         ILogger logger
     )
     {
-        var clients = command.UserIdToSpotifyClient;
+        var profiles = command.UserIdToSpotifyProfile;
         return await Task.WhenAll(
-            clients.Values.Select(
+            profiles.Values.Select(
                 async x =>
                 {
                     try
                     {
-                        await action(x.SpotifyClient, x.Participant);
+                        await action(x.ProfileId, x.Participant);
                         return (x.Participant, true);
                     }
                     catch (Exception e)
@@ -35,14 +35,18 @@ public static class CommandsExtensions
 
     public static async Task SaveDeviceIdAsync(
         this ICommandCanSaveSpotifyDeviceId commandCanSaveSpotifyDeviceId,
-        ISpotifyClient spotifyClient,
+        IPlayerV2Client playerClient,
+        Guid profileId,
         SessionParticipant participant
     )
     {
         try
         {
-            var playback = await spotifyClient.Player.GetCurrentPlayback();
-            participant.DeviceId = playback.Device.Id;
+            var playback = await playerClient.GetPlaybackAsync(profileId);
+            if (playback.Device?.Id is { } deviceId)
+            {
+                participant.DeviceId = deviceId;
+            }
         }
         catch
         {

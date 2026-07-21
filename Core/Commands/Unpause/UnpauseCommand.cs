@@ -3,10 +3,11 @@ using Core.Commands.Base.Interfaces;
 using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
-using Core.Spotify.Client;
+using Core.Spotify.Auth.Storage;
 using Core.Whitelist;
 using Microsoft.Extensions.Logging;
-using SpotifyAPI.Web;
+using SpotifyHelpers.Api.Client;
+using SpotifyHelpers.Dto.Spotify;
 using Telegram.Bot;
 
 namespace Core.Commands.Unpause;
@@ -16,37 +17,31 @@ public class UnpauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandWith
     public UnpauseCommand(
         ITelegramBotClient telegramBotClient,
         ISessionsService sessionsService,
-        ISpotifyClientStorage spotifyClientStorage,
-        ISpotifyClientFactory spotifyClientFactory,
+        ISpotifyProfilesService spotifyProfilesService,
+        ISpotifyHelpersApiClient spotifyHelpersApiClient,
         IWhitelistService whitelistService,
         ILogger<UnpauseCommand> logger
-    ) : base(telegramBotClient, sessionsService, spotifyClientStorage, spotifyClientFactory, whitelistService, logger)
+    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, whitelistService, logger)
     {
     }
 
     public Session Session { get; set; } = null!;
-    public Dictionary<long, (SessionParticipant Participant, ISpotifyClient SpotifyClient)> UserIdToSpotifyClient { get; set; } = null!;
-    public ISpotifyClient SpotifyClient { get; set; } = null!;
+    public Dictionary<long, (SessionParticipant Participant, Guid ProfileId)> UserIdToSpotifyProfile { get; set; } = null!;
+    public Guid SpotifyProfileId { get; set; }
 
     protected override async Task ExecuteAsync()
     {
-        var playerResumePlaybackRequest = new PlayerResumePlaybackRequest();
-        if (Session.Context?.ContextUri is not null)
-        {
-            playerResumePlaybackRequest.ContextUri = Session.Context.ContextUri;
-            playerResumePlaybackRequest.PositionMs = Session.Context.PositionMs;
-            playerResumePlaybackRequest.OffsetParam = new PlayerResumePlaybackRequest.Offset
-            {
-                Uri = Session.Context.TrackUri,
-            };
-        }
-
         var result = await this.ApplyToAllParticipants(
-            (client, participant) =>
-            {
-                playerResumePlaybackRequest.DeviceId = participant.DeviceId;
-                return client.Player.ResumePlayback(playerResumePlaybackRequest);
-            }, Logger
+            (profileId, participant) => SpotifyHelpersApiClient.PlayerV2.PlayAsync(
+                profileId,
+                new SpotifyPlayRequestDto
+                {
+                    DeviceId = participant.DeviceId,
+                    ContextUri = Session.Context?.ContextUri,
+                    PositionMs = Session.Context?.ContextUri is null ? null : Session.Context.PositionMs,
+                    OffsetUri = Session.Context?.ContextUri is null ? null : Session.Context.TrackUri,
+                }),
+            Logger
         );
         await NotifyAllAsync(Session, $"{UserName} возобновляет воспроизведение\n{result.ToFormattedString()}");
     }
