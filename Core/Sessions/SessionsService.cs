@@ -1,15 +1,13 @@
+using System.Collections.Concurrent;
 using Core.Extensions;
 using Core.Sessions.Models;
 using Core.Sessions.Storage;
 
 namespace Core.Sessions;
 
-public class SessionsService : ISessionsService
+public class SessionsService(ISessionsRepository sessionsRepository) : ISessionsService
 {
-    public SessionsService(ISessionsRepository sessionsRepository)
-    {
-        this.sessionsRepository = sessionsRepository;
-    }
+    public int ActiveSessionsCount => sessionsByUser.Values.Distinct().Count();
 
     public async Task InitializeAsync()
     {
@@ -18,7 +16,7 @@ public class SessionsService : ISessionsService
         {
             foreach (var participant in session.Participants)
             {
-                sessionsByUser.Add(participant.UserId, session.Id);
+                sessionsByUser[participant.UserId] = session.Id;
             }
         }
     }
@@ -38,7 +36,7 @@ public class SessionsService : ISessionsService
             Participants = new List<SessionParticipant> { sessionParticipant },
         };
         await sessionsRepository.CreateAsync(newSession);
-        sessionsByUser.Add(authorId, newSession.Id);
+        sessionsByUser[authorId] = newSession.Id;
         return newSession.Id;
     }
 
@@ -56,7 +54,7 @@ public class SessionsService : ISessionsService
             return session;
         }
 
-        sessionsByUser.Remove(userId);
+        sessionsByUser.TryRemove(userId, out _);
         return null;
     }
 
@@ -83,7 +81,7 @@ public class SessionsService : ISessionsService
 
         session.Participants.Add(participant);
         await sessionsRepository.UpdateAsync(session);
-        sessionsByUser.Add(userId, sessionId);
+        sessionsByUser[userId] = sessionId;
     }
 
     public async Task LeaveAsync(Guid sessionId, long userId)
@@ -97,7 +95,7 @@ public class SessionsService : ISessionsService
 
         if (sessionsByUser.TryGetValue(userId, out var userSessionId) && userSessionId == sessionId)
         {
-            sessionsByUser.Remove(userId);
+            sessionsByUser.TryRemove(userId, out _);
         }
     }
 
@@ -111,12 +109,11 @@ public class SessionsService : ISessionsService
 
         foreach (var participant in session.Participants)
         {
-            sessionsByUser.Remove(participant.UserId);
+            sessionsByUser.TryRemove(participant.UserId, out _);
         }
 
         await sessionsRepository.DeleteAsync(sessionId);
     }
 
-    private readonly Dictionary<long, Guid> sessionsByUser = new();
-    private readonly ISessionsRepository sessionsRepository;
+    private readonly ConcurrentDictionary<long, Guid> sessionsByUser = new();
 }

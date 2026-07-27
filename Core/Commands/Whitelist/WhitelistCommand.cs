@@ -5,7 +5,6 @@ using Core.Whitelist;
 using Microsoft.Extensions.Logging;
 using SpotifyHelpers.Api.Client;
 using Telegram.Bot;
-using TelemetryApp.Api.Client.Log;
 
 namespace Core.Commands.Whitelist;
 

@@ -11,7 +11,6 @@ using Core.Commands.PlayMusic;
 using Core.Commands.Recognize;
 using Core.Commands.SessionInfo;
 using Core.Commands.Start;
-using Core.Commands.StatsByArtists;
 using Core.Commands.Unpause;
 using Core.Commands.Whitelist;
 
@@ -44,7 +43,6 @@ public class CommandsFactory(IServiceProvider serviceProvider) : ICommandsFactor
         { CommandType.GroupAddToQueue, typeof(IGroupAddSongsToQueueCommand) },
         { CommandType.ForceAuth, typeof(IForceAuthCommand) },
         { CommandType.SessionInfo, typeof(ISessionInfoCommand) },
-        { CommandType.StatsByArtists, typeof(IPlaylistStatsByArtistCommand) },
         { CommandType.PlayMusic, typeof(IPlayMusicCommand) },
     };
 }
