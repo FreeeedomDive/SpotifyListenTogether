@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using Core.Commands.Factory;
 using Core.Commands.Recognize;
+using Core.Telemetry;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -53,6 +55,10 @@ public class TelegramBotWorker : ITelegramBotWorker
         }
 
         var userId = message.Chat.Id;
+
+        using var activity = SltTelemetry.ActivitySource.StartActivity(SltTelemetry.UpdateActivityName, ActivityKind.Consumer);
+        activity?.SetTag(SltTelemetry.ChatIdTag, userId);
+
         try
         {
             var commandType = commandsRecognizer.ParseCommand(message);
@@ -67,6 +73,9 @@ public class TelegramBotWorker : ITelegramBotWorker
         }
         catch (Exception exception)
         {
+            activity?.SetTag(SltTelemetry.ErrorTypeTag, exception.GetType().Name);
+            activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+            logger.LogError(exception, "Unhandled error while processing an update");
             await telegramBotClient.SendTextMessageAsync(userId, exception.Message, cancellationToken: cancellationToken);
         }
     }

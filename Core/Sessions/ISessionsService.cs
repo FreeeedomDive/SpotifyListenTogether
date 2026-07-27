@@ -4,6 +4,8 @@ namespace Core.Sessions;
 
 public interface ISessionsService
 {
+    int ActiveSessionsCount { get; }
+
     Task InitializeAsync();
     Task<Session?> TryReadAsync(Guid sessionId);
     Task<Guid> CreateAsync(SessionParticipant sessionParticipant);

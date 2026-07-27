@@ -6,6 +6,7 @@ using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Auth.Storage;
+using Core.Telemetry;
 using Core.Whitelist;
 using Microsoft.Extensions.Logging;
 using SpotifyHelpers.Api.Client;
@@ -39,12 +40,20 @@ public abstract class CommandBase : ICommandBase
         UserId = message.Chat.Id;
         UserName = message.Chat.Username ?? $"{message.Chat.FirstName} {message.Chat.LastName}";
         Message = message.Text ?? string.Empty;
+
+        using var activity = SltTelemetry.ActivitySource.StartActivity($"{SltTelemetry.CommandActivityName} {CommandName}");
+        activity?.SetTag(SltTelemetry.CommandTag, CommandName);
+        activity?.SetTag(SltTelemetry.ChatIdTag, UserId);
+
         var stopwatch = Stopwatch.StartNew();
+        var outcome = SltCommandOutcomes.Ok;
         try
         {
             var isWhitelisted = await whitelistService.IsUserWhitelistedAsync(UserId);
             if (!isWhitelisted && this is not WhitelistCommand)
             {
+                outcome = SltCommandOutcomes.Rejected;
+                SltTelemetry.RecordWhitelistRejection();
                 Logger.LogWarning("User {UserName} ({UserId}) tried to use {CommandName}, but not whitelisted", UserName, UserId, CommandName);
                 return;
             }
@@ -56,8 +65,15 @@ public abstract class CommandBase : ICommandBase
             }
 
             var session = await SessionsService.FindAsync(UserId);
+            if (session is not null)
+            {
+                activity?.SetTag(SltTelemetry.SessionIdTag, session.Id);
+                activity?.SetTag(SltTelemetry.ParticipantsTag, session.Participants.Count);
+            }
+
             if (this is ICommandWithoutSession && session is not null)
             {
+                outcome = SltCommandOutcomes.SessionConflict;
                 await SendResponseAsync(UserId, $"Сначала нужно выйти из комнаты `{session.Id}`", ParseMode.MarkdownV2);
                 return;
             }
@@ -66,6 +82,7 @@ public abstract class CommandBase : ICommandBase
             {
                 if (session is null)
                 {
+                    outcome = SltCommandOutcomes.SessionRequired;
                     await SendResponseAsync(UserId, "Сначала нужно войти в комнату для совместного прослушивания");
                     return;
                 }
@@ -78,6 +95,7 @@ public abstract class CommandBase : ICommandBase
                 var profileId = await spotifyProfilesService.TryGetAuthorizedProfileIdAsync(UserId);
                 if (profileId is null)
                 {
+                    outcome = SltCommandOutcomes.AuthRequired;
                     await SendResponseAsync(UserId, "Сначала нужно пройти авторизацию в Spotify");
                     return;
                 }
@@ -129,11 +147,17 @@ public abstract class CommandBase : ICommandBase
         }
         catch (Exception exception)
         {
+            outcome = SltCommandOutcomes.Error;
+            activity?.SetTag(SltTelemetry.ErrorTypeTag, exception.GetType().Name);
+            activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
             Logger.LogError(exception, "Unexpected error in command {CommandName}", CommandName);
             await SendResponseAsync(UserId, $"Unexpected error in command {CommandName}");
         }
         finally
         {
+            stopwatch.Stop();
+            activity?.SetTag(SltTelemetry.OutcomeTag, outcome);
+            SltTelemetry.RecordCommand(CommandName, outcome, stopwatch.Elapsed);
             Logger.LogInformation("{UserName} used command {CommandName}, elapsed {Milliseconds}ms", UserName, CommandName, stopwatch.ElapsedMilliseconds);
         }
     }

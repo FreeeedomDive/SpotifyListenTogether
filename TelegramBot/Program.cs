@@ -15,12 +15,23 @@ using SpotifyHelpers.Api.Client;
 using SpotifyHelpers.Api.Client.Configuration;
 using SqlRepositoryBase.Configuration.Extensions;
 using Telegram.Bot;
+using TelegramBot.Telemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog(
-    (context, configuration) => configuration.ReadFrom.Configuration(context.Configuration)
+    (context, configuration) =>
+    {
+        configuration.ReadFrom.Configuration(context.Configuration);
+
+        if (OpenTelemetryExtensions.IsExportEnabled())
+        {
+            configuration.WriteTo.WriteToOpenTelemetry();
+        }
+    }
 );
+
+builder.Services.AddSltTelemetry();
 
 builder.Services.Configure<TelegramSettings>(builder.Configuration.GetRequiredSection("Telegram"));
 
@@ -60,6 +71,7 @@ builder.Services.AddSingleton<ITelegramBotClient>(
 );
 
 var app = builder.Build();
+app.Services.StartSltTelemetry();
 
 var sessionsService = app.Services.GetRequiredService<ISessionsService>();
 await sessionsService.InitializeAsync();
