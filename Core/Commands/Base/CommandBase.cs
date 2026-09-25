@@ -1,13 +1,11 @@
 using System.Diagnostics;
 using Core.Commands.Base.Interfaces;
 using Core.Commands.ForceAuth;
-using Core.Commands.Whitelist;
 using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Auth.Storage;
 using Core.Telemetry;
-using Core.Whitelist;
 using Microsoft.Extensions.Logging;
 using SpotifyHelpers.Api.Client;
 using Telegram.Bot;
@@ -23,11 +21,9 @@ public abstract class CommandBase : ICommandBase
         ISessionsService sessionsService,
         ISpotifyProfilesService spotifyProfilesService,
         ISpotifyHelpersApiClient spotifyHelpersApiClient,
-        IWhitelistService whitelistService,
         ILogger logger
     )
     {
-        this.whitelistService = whitelistService;
         TelegramBotClient = telegramBotClient;
         SessionsService = sessionsService;
         this.spotifyProfilesService = spotifyProfilesService;
@@ -49,15 +45,6 @@ public abstract class CommandBase : ICommandBase
         var outcome = SltCommandOutcomes.Ok;
         try
         {
-            var isWhitelisted = await whitelistService.IsUserWhitelistedAsync(UserId);
-            if (!isWhitelisted && this is not WhitelistCommand)
-            {
-                outcome = SltCommandOutcomes.Rejected;
-                SltTelemetry.RecordWhitelistRejection();
-                Logger.LogWarning("User {UserName} ({UserId}) tried to use {CommandName}, but not whitelisted", UserName, UserId, CommandName);
-                return;
-            }
-
             // ReSharper disable once SuspiciousTypeConversion.Global - this is added for future validations
             if (this is ICommandWithoutSession && this is ICommandWithSession)
             {
@@ -225,6 +212,5 @@ public abstract class CommandBase : ICommandBase
     protected ISessionsService SessionsService { get; }
     protected ISpotifyHelpersApiClient SpotifyHelpersApiClient { get; }
     protected ILogger Logger { get; }
-    private readonly IWhitelistService whitelistService;
     private readonly ISpotifyProfilesService spotifyProfilesService;
 }

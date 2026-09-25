@@ -26,7 +26,6 @@ public static class SltTelemetry
     public const string CommandsCounterName = "slt.commands";
     public const string CommandDurationName = "slt.command.duration";
     public const string SessionsActiveName = "slt.sessions.active";
-    public const string WhitelistRejectionsName = "slt.whitelist.rejections";
 
     public static readonly ActivitySource ActivitySource = new(ActivitySourceName);
 
@@ -40,11 +39,6 @@ public static class SltTelemetry
 
         Commands.Add(1, tags);
         CommandDuration.Record(duration.TotalSeconds, tags);
-    }
-
-    public static void RecordWhitelistRejection()
-    {
-        WhitelistRejections.Add(1);
     }
 
     public static void TrackState(Func<int> observeActiveSessions)
@@ -69,11 +63,5 @@ public static class SltTelemetry
         CommandDurationName,
         "s",
         "Wall clock duration of a command, from the guards in CommandBase to the last Telegram reply"
-    );
-
-    private static readonly Counter<long> WhitelistRejections = Meter.CreateCounter<long>(
-        WhitelistRejectionsName,
-        "{rejection}",
-        "Commands refused because the user is not on the whitelist"
     );
 }

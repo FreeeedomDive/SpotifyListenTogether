@@ -3,7 +3,6 @@ using Core.Commands.Base.Interfaces;
 using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Auth.Storage;
-using Core.Whitelist;
 using Microsoft.Extensions.Logging;
 using SpotifyHelpers.Api.Client;
 using Telegram.Bot;
@@ -18,9 +17,8 @@ public class CreateSessionCommand : CommandBase, ICreateSessionCommand, ICommand
         ISessionsService sessionsService,
         ISpotifyProfilesService spotifyProfilesService,
         ISpotifyHelpersApiClient spotifyHelpersApiClient,
-        IWhitelistService whitelistService,
         ILogger<CreateSessionCommand> logger
-    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, whitelistService, logger)
+    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, logger)
     {
     }
 

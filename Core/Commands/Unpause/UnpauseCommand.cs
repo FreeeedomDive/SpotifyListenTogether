@@ -4,7 +4,6 @@ using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Auth.Storage;
-using Core.Whitelist;
 using Microsoft.Extensions.Logging;
 using SpotifyHelpers.Api.Client;
 using SpotifyHelpers.Dto.Spotify;
@@ -19,9 +18,8 @@ public class UnpauseCommand : CommandBase, ICommandWithSpotifyAuth, ICommandWith
         ISessionsService sessionsService,
         ISpotifyProfilesService spotifyProfilesService,
         ISpotifyHelpersApiClient spotifyHelpersApiClient,
-        IWhitelistService whitelistService,
         ILogger<UnpauseCommand> logger
-    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, whitelistService, logger)
+    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, logger)
     {
     }
 
