@@ -53,6 +53,21 @@ namespace Core.Migrations
                     b.ToTable("AuthApiUsers");
                 });
 
+            modelBuilder.Entity("Core.Whitelist.WhitelistStorageElement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("TelegramUserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TelegramUserId");
+
+                    b.ToTable("Whitelist");
+                });
 #pragma warning restore 612, 618
         }
     }
