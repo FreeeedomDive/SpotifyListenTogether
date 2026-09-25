@@ -12,7 +12,6 @@ using Core.Commands.Recognize;
 using Core.Commands.SessionInfo;
 using Core.Commands.Start;
 using Core.Commands.Unpause;
-using Core.Commands.Whitelist;
 
 namespace Core.Commands.Factory;
 
@@ -32,7 +31,6 @@ public class CommandsFactory(IServiceProvider serviceProvider) : ICommandsFactor
     private readonly Dictionary<CommandType, Type> commandTypes = new()
     {
         { CommandType.Start, typeof(IStartCommand) },
-        { CommandType.Whitelist, typeof(IWhitelistCommand) },
         { CommandType.CreateSession, typeof(ICreateSessionCommand) },
         { CommandType.LeaveSession, typeof(ILeaveSessionCommand) },
         { CommandType.JoinSession, typeof(IJoinSessionCommand) },

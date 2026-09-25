@@ -8,7 +8,6 @@ using Core.Settings;
 using Core.Spotify.Auth.Storage;
 using Core.Spotify.Links;
 using Core.TelegramWorker;
-using Core.Whitelist;
 using Microsoft.Extensions.Options;
 using Serilog;
 using SpotifyHelpers.Api.Client;
@@ -59,7 +58,6 @@ foreach (var commandInterfaceType in commandTypes)
 
 builder.Services.AddTransient<ICommandsFactory, CommandsFactory>();
 
-builder.Services.AddTransient<IWhitelistService, WhitelistService>();
 builder.Services.AddTransient<ITelegramBotWorker, TelegramBotWorker>();
 
 builder.Services.AddSingleton<ITelegramBotClient>(

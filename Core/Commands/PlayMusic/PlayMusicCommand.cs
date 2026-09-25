@@ -5,7 +5,6 @@ using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Auth.Storage;
 using Core.Spotify.Links;
-using Core.Whitelist;
 using Microsoft.Extensions.Logging;
 using SpotifyHelpers.Api.Client;
 using SpotifyHelpers.Dto.Spotify;
@@ -27,9 +26,8 @@ public class PlayMusicCommand
         ISessionsService sessionsService,
         ISpotifyProfilesService spotifyProfilesService,
         ISpotifyHelpersApiClient spotifyHelpersApiClient,
-        IWhitelistService whitelistService,
         ILogger<PlayMusicCommand> logger
-    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, whitelistService, logger)
+    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, logger)
     {
         this.spotifyLinksRecognizeService = spotifyLinksRecognizeService;
     }

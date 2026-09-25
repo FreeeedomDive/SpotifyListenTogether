@@ -4,7 +4,6 @@ using Core.Extensions;
 using Core.Sessions;
 using Core.Sessions.Models;
 using Core.Spotify.Auth.Storage;
-using Core.Whitelist;
 using Microsoft.Extensions.Logging;
 using SpotifyHelpers.Api.Client;
 using Telegram.Bot;
@@ -19,9 +18,8 @@ public class JoinSessionCommand : CommandBase, ICommandWithoutSession, IInitiate
         ISessionsService sessionsService,
         ISpotifyProfilesService spotifyProfilesService,
         ISpotifyHelpersApiClient spotifyHelpersApiClient,
-        IWhitelistService whitelistService,
         ILogger<JoinSessionCommand> logger
-    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, whitelistService, logger)
+    ) : base(telegramBotClient, sessionsService, spotifyProfilesService, spotifyHelpersApiClient, logger)
     {
     }
 
